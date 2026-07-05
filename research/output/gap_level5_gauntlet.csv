@@ -1,11 +1,11 @@
-rule,n_events,cv_fold_means,cv_positive_folds,cv_pass,perm_p,perm_pass,net_mean,boot_ci_5_95,boot_pass,dsr,dsr_pass,n_trials_deflated_for,pbo,pbo_pass,gauntlet_score,grade
-"L6:sub(rvol_open30, rank(sub(nifty_ret_5d, zscore_20d)))",453,"[0.0188, 0.0686, 0.0388, 0.031, 0.0965]",5/5,True,0.002,True,-0.0045,"(-0.0256, 0.0187)",False,0.0003,False,702,0.429,True,3/5,SILVER
-L6:rvol_20d,453,"[-0.0125, 0.1386, 0.0151, 0.0387, 0.02]",4/5,True,0.014,True,-0.0238,"(-0.0475, -0.0007)",False,0.0,False,702,0.429,True,3/5,SILVER
-"L6:sub(rvol_20d, rank(sub(nifty_ret_5d, rvol_20d)))",453,"[-0.0094, 0.0632, 0.0571, 0.1135, 0.0915]",4/5,True,0.002,True,0.0025,"(-0.0198, 0.0245)",False,0.0014,False,702,0.429,True,3/5,SILVER
-"L6:sub(rvol_20d, rank(nifty_ret_5d))",453,"[0.0026, 0.0665, 0.0488, 0.1207, 0.0932]",5/5,True,0.002,True,0.008,"(-0.0151, 0.031)",False,0.0043,False,702,0.429,True,3/5,SILVER
-"L6:sub(rvol_20d, rank(sub(nifty_ret_5d, mkt_gap_median)))",453,"[0.0323, 0.0226, 0.031, 0.112, 0.0789]",5/5,True,0.002,True,0.0015,"(-0.0232, 0.0286)",False,0.0011,False,702,0.429,True,3/5,SILVER
-"L6:sub(sub(nifty_ret_5d, rvol_20d), rvol_open30)",452,"[0.0171, 0.057, 0.0332, 0.1027, 0.0445]",5/5,True,0.004,True,-0.0117,"(-0.0385, 0.0151)",False,0.0,False,702,0.429,True,3/5,SILVER
-"L6:sub(rvol_20d, rank(sub(nifty_ret_5d, zscore_20d)))",453,"[0.0459, 0.0907, 0.026, 0.0399, 0.0537]",5/5,True,0.004,True,-0.0113,"(-0.0336, 0.0113)",False,0.0001,False,702,0.429,True,3/5,SILVER
-"L6:sub(rvol_20d, rank(sub(nifty_ret_5d, gap_idiosyncratic)))",453,"[0.0056, 0.0929, 0.028, 0.1345, 0.1217]",5/5,True,0.002,True,0.01,"(-0.0166, 0.0378)",False,0.0062,False,702,0.429,True,3/5,SILVER
-"L6:sub(nifty_ret_5d, rvol_open30)",452,"[0.0181, 0.0626, 0.0274, 0.1039, 0.0477]",5/5,True,0.004,True,-0.0121,"(-0.0378, 0.0154)",False,0.0,False,702,0.429,True,3/5,SILVER
-"L6:sub(rvol_20d, rank(sub(nifty_ret_5d, nifty_ret_1d)))",453,"[0.0036, 0.0622, -0.0207, 0.0977, 0.0829]",4/5,True,0.004,True,-0.013,"(-0.0366, 0.0108)",False,0.0,False,702,0.429,True,3/5,SILVER
+rule,n_events,cost_mean_pct,cv_fold_means,cv_positive_folds,cv_pass,perm_p,perm_pass,net_mean,boot_ci_5_95,boot_pass,dsr,dsr_pass,n_trials_deflated_for,pbo,pbo_pass,gauntlet_score,grade
+"L6:sub(rvol_open30, rank(sub(nifty_ret_5d, zscore_20d)))",453,0.9864,"[-0.9676, -0.9178, -0.9477, -0.9554, -0.8899]",0/5,False,0.002,True,-0.9309,"(-0.952, -0.9077)",False,0.0,False,702,0.286,True,2/5,REJECTED
+L6:rvol_20d,453,0.9864,"[-0.9989, -0.8478, -0.9714, -0.9477, -0.9664]",0/5,False,0.014,True,-0.9502,"(-0.9739, -0.9271)",False,0.0,False,702,0.386,True,2/5,REJECTED
+"L6:sub(rvol_20d, rank(sub(nifty_ret_5d, rvol_20d)))",453,0.9864,"[-0.9959, -0.9232, -0.9293, -0.873, -0.8949]",0/5,False,0.002,True,-0.9239,"(-0.9463, -0.9019)",False,0.0,False,702,0.314,True,2/5,REJECTED
+"L6:sub(rvol_20d, rank(nifty_ret_5d))",453,0.9864,"[-0.9839, -0.9199, -0.9377, -0.8657, -0.8933]",0/5,False,0.002,True,-0.9185,"(-0.9415, -0.8954)",False,0.0,False,702,0.386,True,2/5,REJECTED
+"L6:sub(rvol_20d, rank(sub(nifty_ret_5d, mkt_gap_median)))",453,0.9864,"[-0.9541, -0.9639, -0.9554, -0.8745, -0.9075]",0/5,False,0.002,True,-0.9249,"(-0.9496, -0.8979)",False,0.0,False,702,0.314,True,2/5,REJECTED
+"L6:sub(sub(nifty_ret_5d, rvol_20d), rvol_open30)",452,0.9864,"[-0.9694, -0.9294, -0.9532, -0.8837, -0.9419]",0/5,False,0.004,True,-0.9381,"(-0.9649, -0.9113)",False,0.0,False,702,0.4,True,2/5,REJECTED
+"L6:sub(rvol_20d, rank(sub(nifty_ret_5d, zscore_20d)))",453,0.9864,"[-0.9405, -0.8958, -0.9605, -0.9465, -0.9327]",0/5,False,0.004,True,-0.9377,"(-0.96, -0.9152)",False,0.0,False,702,0.314,True,2/5,REJECTED
+"L6:sub(rvol_20d, rank(sub(nifty_ret_5d, gap_idiosyncratic)))",453,0.9864,"[-0.9808, -0.8935, -0.9584, -0.852, -0.8647]",0/5,False,0.002,True,-0.9164,"(-0.9431, -0.8886)",False,0.0,False,702,0.457,True,2/5,REJECTED
+"L6:sub(nifty_ret_5d, rvol_open30)",452,0.9864,"[-0.9683, -0.9239, -0.959, -0.8825, -0.9387]",0/5,False,0.004,True,-0.9385,"(-0.9643, -0.911)",False,0.0,False,702,0.386,True,2/5,REJECTED
+"L6:sub(rvol_20d, rank(sub(nifty_ret_5d, nifty_ret_1d)))",453,0.9864,"[-0.9829, -0.9242, -1.0072, -0.8888, -0.9035]",0/5,False,0.004,True,-0.9395,"(-0.963, -0.9156)",False,0.0,False,702,0.414,True,2/5,REJECTED

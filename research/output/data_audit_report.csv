@@ -1,0 +1,2 @@
+symbol,date,issue,detail,severity
+*UNIVERSE*,,SURVIVORSHIP_RISK_no_pit_universe_file,"no fno_universe.parquet; 0/8 symbols start >1y after the earliest -- results may be inflated by survivorship bias. Provide [symbol, from_date, to_date].",CRITICAL
