@@ -44,16 +44,16 @@ Grades: PLATINUM = passed all 5 gauntlet tests (purged CV, permutation, bootstra
 
 ### Validation gauntlet (level 5) -- FINAL GRADES
 
-- **SILVER** L6:sub(rvol_open30, rank(sub(nifty_ret_5d, zscore_20d))): net mean -0.004%/trade, folds 5/5, perm p=0.002, PBO=0.429, DSR=0.0003 [3/5]
-- **SILVER** L6:rvol_20d: net mean -0.024%/trade, folds 4/5, perm p=0.014, PBO=0.429, DSR=0.0 [3/5]
-- **SILVER** L6:sub(rvol_20d, rank(sub(nifty_ret_5d, rvol_20d))): net mean 0.003%/trade, folds 4/5, perm p=0.002, PBO=0.429, DSR=0.0014 [3/5]
-- **SILVER** L6:sub(rvol_20d, rank(nifty_ret_5d)): net mean 0.008%/trade, folds 5/5, perm p=0.002, PBO=0.429, DSR=0.0043 [3/5]
-- **SILVER** L6:sub(rvol_20d, rank(sub(nifty_ret_5d, mkt_gap_median))): net mean 0.002%/trade, folds 5/5, perm p=0.002, PBO=0.429, DSR=0.0011 [3/5]
-- **SILVER** L6:sub(sub(nifty_ret_5d, rvol_20d), rvol_open30): net mean -0.012%/trade, folds 5/5, perm p=0.004, PBO=0.429, DSR=0.0 [3/5]
-- **SILVER** L6:sub(rvol_20d, rank(sub(nifty_ret_5d, zscore_20d))): net mean -0.011%/trade, folds 5/5, perm p=0.004, PBO=0.429, DSR=0.0001 [3/5]
-- **SILVER** L6:sub(rvol_20d, rank(sub(nifty_ret_5d, gap_idiosyncratic))): net mean 0.010%/trade, folds 5/5, perm p=0.002, PBO=0.429, DSR=0.0062 [3/5]
-- **SILVER** L6:sub(nifty_ret_5d, rvol_open30): net mean -0.012%/trade, folds 5/5, perm p=0.004, PBO=0.429, DSR=0.0 [3/5]
-- **SILVER** L6:sub(rvol_20d, rank(sub(nifty_ret_5d, nifty_ret_1d))): net mean -0.013%/trade, folds 4/5, perm p=0.004, PBO=0.429, DSR=0.0 [3/5]
+- **REJECTED** L6:sub(rvol_open30, rank(sub(nifty_ret_5d, zscore_20d))): net mean -0.931%/trade, folds 0/5, perm p=0.002, PBO=0.286, DSR=0.0 [2/5]
+- **REJECTED** L6:rvol_20d: net mean -0.950%/trade, folds 0/5, perm p=0.014, PBO=0.386, DSR=0.0 [2/5]
+- **REJECTED** L6:sub(rvol_20d, rank(sub(nifty_ret_5d, rvol_20d))): net mean -0.924%/trade, folds 0/5, perm p=0.002, PBO=0.314, DSR=0.0 [2/5]
+- **REJECTED** L6:sub(rvol_20d, rank(nifty_ret_5d)): net mean -0.918%/trade, folds 0/5, perm p=0.002, PBO=0.386, DSR=0.0 [2/5]
+- **REJECTED** L6:sub(rvol_20d, rank(sub(nifty_ret_5d, mkt_gap_median))): net mean -0.925%/trade, folds 0/5, perm p=0.002, PBO=0.314, DSR=0.0 [2/5]
+- **REJECTED** L6:sub(sub(nifty_ret_5d, rvol_20d), rvol_open30): net mean -0.938%/trade, folds 0/5, perm p=0.004, PBO=0.4, DSR=0.0 [2/5]
+- **REJECTED** L6:sub(rvol_20d, rank(sub(nifty_ret_5d, zscore_20d))): net mean -0.938%/trade, folds 0/5, perm p=0.004, PBO=0.314, DSR=0.0 [2/5]
+- **REJECTED** L6:sub(rvol_20d, rank(sub(nifty_ret_5d, gap_idiosyncratic))): net mean -0.916%/trade, folds 0/5, perm p=0.002, PBO=0.457, DSR=0.0 [2/5]
+- **REJECTED** L6:sub(nifty_ret_5d, rvol_open30): net mean -0.939%/trade, folds 0/5, perm p=0.004, PBO=0.386, DSR=0.0 [2/5]
+- **REJECTED** L6:sub(rvol_20d, rank(sub(nifty_ret_5d, nifty_ret_1d))): net mean -0.940%/trade, folds 0/5, perm p=0.004, PBO=0.414, DSR=0.0 [2/5]
 
 ## mean_reversion
 
