@@ -48,5 +48,28 @@ N_BUCKETS = 5              # quantile buckets for single-factor analysis
 COMBO_MAX_FACTORS = 3      # max factors in combination search
 COMBO_TOP_SINGLE = 15      # only combine top-N single factors (combinatorial control)
 
+# --------------------------------------- level 5: validation gauntlet ------
+COST_PCT = 0.06            # round-trip cost+slippage per trade (% of notional)
+                           # ~= STT + brokerage + impact for liquid F&O stocks
+N_CV_FOLDS = 5             # purged walk-forward folds
+EMBARGO_DAYS = 5           # embargo gap after each test fold (label overlap guard)
+N_PERMUTATIONS = 500       # Monte Carlo permutations for empirical p-values
+N_BOOTSTRAP = 1000         # stationary block bootstrap resamples
+BOOTSTRAP_BLOCK = 20       # mean block length (events) for bootstrap
+CSCV_SPLITS = 8            # CSCV partitions for PBO (must be even)
+PBO_MAX = 0.5              # reject edges with overfit probability above this
+
+# --------------------------------------- level 6: GP alpha miner -----------
+GP_POPULATION = 200        # formulas per generation
+GP_GENERATIONS = 12        # evolution rounds
+GP_MAX_DEPTH = 4           # max expression-tree depth
+GP_TOP_KEEP = 10           # alphas reported after validation
+GP_SEED = 42
+
+# --------------------------------------- triple-barrier labels -------------
+TB_UP_MULT = 2.0           # profit barrier = TB_UP_MULT * event-day ATR%
+TB_DN_MULT = 1.0           # stop barrier   = TB_DN_MULT * event-day ATR%
+TB_MAX_MIN = 120           # vertical barrier: minutes after entry
+
 # ------------------------------------------------------------- outputs -----
 OUT_DIR = Path(__file__).parent / "output"

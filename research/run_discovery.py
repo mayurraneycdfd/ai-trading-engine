@@ -21,15 +21,18 @@ from __future__ import annotations
 import argparse
 import sys
 
+import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 
+import alpha_search as als
 import data_loader as dl
 import edge_discovery as ed
 import features as feat
 import hidden_edges as he
 import labels as lab
+import validation as val
 from config import GAP_GO_HORIZONS, MR_HORIZONS, OUT_DIR
 
 
@@ -76,7 +79,7 @@ def build_panel(symbols: list[str]) -> tuple[pd.DataFrame, pd.DataFrame]:
 def run_strategy(panel: pd.DataFrame, name: str, target: str, all_targets: list[str]):
     if panel.empty:
         print(f"  [{name}] no events found -- check data paths in config.py")
-        return None, None, None, None
+        return None, None, None, None, None, None
     print(f"\n=== {name.upper()}  target={target}  events={len(panel)} ===")
 
     l1 = ed.level1_single_factors(panel, target, all_targets)
@@ -108,12 +111,68 @@ def run_strategy(panel: pd.DataFrame, name: str, target: str, all_targets: list[
                 if "confirmed" in df.columns else 0
             print(f"  level 4 [{det_name}]: {len(df)} candidates, "
                   f"{n_conf} confirmed OOS")
-    return l1, l2, l3, l4
+
+    # LEVEL 6: genetic-programming alpha miner (evolves NEW formulas)
+    factor_cols = ed._factor_cols(panel, target, all_targets)
+    l6 = als.evolve_alphas(panel.dropna(subset=[target]), target, factor_cols)
+    if not l6.empty:
+        l6.drop(columns=["tree"]).to_csv(
+            OUT_DIR / f"{name}_level6_evolved_alphas.csv", index=False)
+        print(f"  level 6: {len(l6)} evolved alphas, "
+              f"{int(l6['confirmed'].sum())} confirmed OOS")
+
+    # LEVEL 5: validation gauntlet on every surviving candidate.
+    # n_trials = total hypotheses tested across all levels (for DSR haircut)
+    n_trials = len(l1) + (len(l2) if l2 is not None else 0) + \
+        sum(len(df) for df in l4.values() if df is not None) + \
+        (len(l6) * 50 if not l6.empty else 0)  # GP searched a big space
+    gauntlet_rows = []
+    family: dict[str, pd.Series] = {}
+
+    # candidates from level 1
+    conf1_idx = l1[l1["fdr_pass"] & l1["confirmed"]].head(10).index \
+        if not l1.empty else []
+    for f in conf1_idx:
+        mask = ed._bucket_mask(panel, f, str(l1.loc[f, "best_bucket"]))
+        sel = panel.loc[mask.fillna(False)]
+        family[f"L1:{f}"] = pd.Series(sel[target].values, index=sel["date"].values)
+    # candidates from level 6
+    l6_masks = {}
+    if not l6.empty:
+        for _, r in l6[l6["confirmed"]].iterrows():
+            m = als.alpha_top_decile_mask(r["tree"], panel, np.sign(r["oos_ic"]))
+            l6_masks[f"L6:{r['formula'][:60]}"] = m
+            sel = panel.loc[m.fillna(False)]
+            family[f"L6:{r['formula'][:60]}"] = \
+                pd.Series(sel[target].values, index=sel["date"].values)
+
+    for f in conf1_idx:
+        mask = ed._bucket_mask(panel, f, str(l1.loc[f, "best_bucket"]))
+        fam = {k: v for k, v in family.items() if k != f"L1:{f}"}
+        gauntlet_rows.append(val.run_gauntlet(
+            panel, mask, target, f"L1:{f}", n_trials, fam))
+    for rname, mask in l6_masks.items():
+        fam = {k: v for k, v in family.items() if k != rname}
+        gauntlet_rows.append(val.run_gauntlet(
+            panel, mask, target, rname, n_trials, fam))
+
+    l5 = pd.DataFrame(gauntlet_rows)
+    if not l5.empty:
+        l5.to_csv(OUT_DIR / f"{name}_level5_gauntlet.csv", index=False)
+        n_plat = int((l5["grade"] == "PLATINUM").sum())
+        n_gold = int((l5["grade"] == "GOLD").sum())
+        print(f"  level 5 gauntlet: {len(l5)} rules tested -> "
+              f"{n_plat} PLATINUM, {n_gold} GOLD "
+              f"(net of costs, deflated for {n_trials} trials)")
+    return l1, l2, l3, l4, l5, l6
 
 
 def write_summary(results: dict):
-    lines = ["# Confirmed Edges (out-of-sample + FDR survivors)\n"]
-    for name, (l1, l2, l3, l4) in results.items():
+    lines = ["# Confirmed Edges (out-of-sample + FDR survivors)\n",
+             "\nGrades: PLATINUM = passed all 5 gauntlet tests "
+             "(purged CV, permutation, bootstrap, deflated Sharpe, PBO), "
+             "net of transaction costs.\n"]
+    for name, (l1, l2, l3, l4, l5, l6) in results.items():
         lines.append(f"\n## {name}\n")
         if l1 is not None and not l1.empty:
             conf = l1[l1["fdr_pass"] & l1["confirmed"]]
@@ -156,6 +215,26 @@ def write_summary(results: dict):
                     oos = r.get("oos_mean", r.get("oos_rank_ic", float("nan")))
                     lines.append(f"- [{det}] {label}: OOS {oos:.3f}, "
                                  f"n={int(r.get('oos_n', r.get('n', 0)))}")
+        if l6 is not None and not l6.empty:
+            conf = l6[l6["confirmed"]]
+            if not conf.empty:
+                lines.append("\n### Evolved alphas (level 6, GP-mined)\n")
+                for _, r in conf.iterrows():
+                    lines.append(f"- `{r['formula']}`: train IC {r['train_ic']:.3f}, "
+                                 f"OOS IC {r['oos_ic']:.3f} (n={int(r['oos_n'])})")
+        if l5 is not None and not l5.empty:
+            lines.append("\n### Validation gauntlet (level 5) -- FINAL GRADES\n")
+            order = {"PLATINUM": 0, "GOLD": 1, "SILVER": 2, "REJECTED": 3}
+            graded = l5.iloc[l5["grade"].map(order).argsort()]
+            for _, r in graded.iterrows():
+                lines.append(
+                    f"- **{r['grade']}** {r['rule']}: net mean "
+                    f"{r.get('net_mean', float('nan')):.3f}%/trade, "
+                    f"folds {r.get('cv_positive_folds', '?')}, "
+                    f"perm p={r.get('perm_p', float('nan'))}, "
+                    f"PBO={r.get('pbo', float('nan'))}, "
+                    f"DSR={r.get('dsr', float('nan'))} "
+                    f"[{r['gauntlet_score']}]")
     (OUT_DIR / "confirmed_edges.md").write_text("\n".join(lines))
     print(f"\nSummary written to {OUT_DIR / 'confirmed_edges.md'}")
 
@@ -174,9 +253,10 @@ def main():
 
     gap_panel, mr_panel = build_panel(symbols)
     gap_targets = [f"cont_{h}m" for h in GAP_GO_HORIZONS] + \
-                  [f"go_{h}m" for h in GAP_GO_HORIZONS] + ["cont_close", "filled_gap"]
+                  [f"go_{h}m" for h in GAP_GO_HORIZONS] + \
+                  ["cont_close", "filled_gap", "tb_ret", "tb_hit"]
     mr_targets = [f"revert_{h}m" for h in MR_HORIZONS] + \
-                 [f"rev_{h}m" for h in MR_HORIZONS] + ["mr_z"]
+                 [f"rev_{h}m" for h in MR_HORIZONS] + ["mr_z", "tb_ret", "tb_hit"]
 
     results = {}
     if args.strategy in ("gap", "both"):

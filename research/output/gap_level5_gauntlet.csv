@@ -1,0 +1,10 @@
+rule,n_events,cv_fold_means,cv_positive_folds,cv_pass,perm_p,perm_pass,net_mean,boot_ci_5_95,boot_pass,dsr,dsr_pass,n_trials_deflated_for,pbo,pbo_pass,gauntlet_score,grade
+L1:tb_tb_ret,953,"[0.1831, 0.2535, 0.2732, 0.2256, 0.2257]",5/5,True,0.002,True,0.174,"(0.1608, 0.1891)",True,1.0,True,619,0.0,True,5/5,PLATINUM
+L6:tb_tb_ret,463,"[0.2828, 0.2942, 0.333, 0.2615, 0.2997]",5/5,True,0.002,True,0.2333,"(0.2149, 0.2515)",True,1.0,True,619,0.0,True,5/5,PLATINUM
+"L6:mul(rank(gap_abs), tb_tb_ret)",463,"[0.263, 0.2717, 0.3314, 0.2539, 0.2584]",5/5,True,0.002,True,0.216,"(0.1932, 0.237)",True,1.0,True,619,0.0,True,5/5,PLATINUM
+L6:log1p_abs(rvol_open30),453,"[-0.0416, 0.0937, 0.0449, 0.0152, 0.0537]",4/5,True,0.02,True,-0.0286,"(-0.0499, -0.0087)",False,0.0,False,619,0.0,True,3/5,SILVER
+L6:rvol_open30,453,"[-0.0416, 0.0937, 0.0449, 0.0152, 0.0537]",4/5,True,0.02,True,-0.0286,"(-0.0499, -0.0087)",False,0.0,False,619,0.0,True,3/5,SILVER
+L6:rvol_20d,453,"[-0.0125, 0.1386, 0.0151, 0.0387, 0.02]",4/5,True,0.014,True,-0.0238,"(-0.0475, -0.0007)",False,0.0,False,619,0.0,True,3/5,SILVER
+L6:log1p_abs(rvol_20d),453,"[-0.0125, 0.1386, 0.0151, 0.0387, 0.02]",4/5,True,0.014,True,-0.0238,"(-0.0475, -0.0007)",False,0.0,False,619,0.0,True,3/5,SILVER
+"L6:abs(min(zscore_20d, tb_tb_ret))",462,"[-0.0018, 0.0493, 0.0694, 0.0837, 0.0561]",4/5,True,0.002,True,-0.0053,"(-0.0238, 0.0123)",False,0.0002,False,619,0.0,True,3/5,SILVER
+"L6:add(sub(rvol_open30, nifty_ret_5d), nifty_ret_1d)",453,"[0.0085, 0.0769, 0.0099, 0.0708, 0.0414]",5/5,True,0.016,True,-0.0223,"(-0.0463, 0.0015)",False,0.0,False,619,0.0,True,3/5,SILVER

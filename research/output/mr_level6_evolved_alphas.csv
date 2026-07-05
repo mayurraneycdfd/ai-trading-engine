@@ -1,0 +1,11 @@
+formula,train_ic,oos_ic,oos_p,oos_n,same_sign,confirmed
+"mul(div(tb_tb_ret, rv20), rv20)",0.5395,0.4931,2.9613274503877976e-266,4365,True,True
+"div(mul(tb_tb_ret, rv20), rv20)",0.5395,0.4931,2.9613274503877976e-266,4365,True,True
+tb_tb_ret,0.5233,0.4931,2.9613274503877976e-266,4365,True,True
+"max(tb_tb_ret, tb_tb_ret)",0.5233,0.4931,2.9613274503877976e-266,4365,True,True
+"div(tb_tb_ret, rvol_20d)",0.5334,0.4911,7.618215356840451e-264,4365,True,True
+"mul(mul(div(tb_tb_ret, rv20), rv20), rvol_20d)",0.5392,0.4909,1.3979021966231513e-263,4365,True,True
+"mul(tb_tb_ret, rvol_20d)",0.5367,0.4909,1.3979021966231513e-263,4365,True,True
+"mul(neg(tb_tb_ret), rv20)",0.5355,-0.4899,2.3941439197599375e-262,4365,True,True
+"mul(mul(div(tb_tb_ret, rv20), rv20), rv20)",0.5355,0.4899,2.3941439197599375e-262,4365,True,True
+"mul(tb_tb_ret, rv20)",0.5355,0.4899,2.3941439197599375e-262,4365,True,True
