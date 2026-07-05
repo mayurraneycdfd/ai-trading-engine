@@ -1,0 +1,39 @@
+pass 1/2: computing gap panel across all stocks...
+  8 symbols loaded
+pass 2/2: features and labels per stock...
+  [1/8] TEST00
+  [2/8] TEST01
+  [3/8] TEST02
+  [4/8] TEST03
+  [5/8] TEST04
+  [6/8] TEST05
+  [7/8] TEST06
+  [8/8] TEST07
+
+=== GAP  target=cont_30m  events=4620 ===
+  level 1: 25 factors tested, 0 confirmed OOS + FDR
+  level 2: 1 combos tested, 0 confirmed
+  level 3: OOS rank IC = 0.019, long-short spread = 0.070%
+  level 4 [A_optimal_thresholds]: 21 candidates, 8 confirmed OOS
+  level 4 [B_regime_conditional]: 94 candidates, 11 confirmed OOS
+  level 4 [D_lead_lag]: 30 candidates, 7 confirmed OOS
+  level 4 [E_sequence_patterns]: 14 candidates, 2 confirmed OOS
+  level 4 [H_calendar]: 9 candidates, 2 confirmed OOS
+  level 4 [C_edge_decay]: 8 candidates, 0 confirmed OOS
+  level 6: 10 evolved alphas, 10 confirmed OOS
+  level 5 gauntlet: 10 rules tested -> 0 PLATINUM, 0 GOLD (net of costs, deflated for 702 trials)
+
+=== MR  target=revert_30m  events=5563 ===
+  level 1: 25 factors tested, 0 confirmed OOS + FDR
+  level 2: 4 combos tested, 0 confirmed
+  level 3: OOS rank IC = 0.014, long-short spread = -0.004%
+  level 4 [A_optimal_thresholds]: 21 candidates, 8 confirmed OOS
+  level 4 [B_regime_conditional]: 95 candidates, 8 confirmed OOS
+  level 4 [D_lead_lag]: 30 candidates, 9 confirmed OOS
+  level 4 [E_sequence_patterns]: 14 candidates, 6 confirmed OOS
+  level 4 [G_hidden_regimes]: 4 candidates, 1 confirmed OOS
+  level 4 [H_calendar]: 17 candidates, 4 confirmed OOS
+  level 4 [C_edge_decay]: 8 candidates, 0 confirmed OOS
+  level 6: 10 evolved alphas, 0 confirmed OOS
+
+Summary written to /vercel/share/v0-project/research/output/confirmed_edges.md

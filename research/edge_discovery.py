@@ -26,11 +26,16 @@ from stats import (benjamini_hochberg, bucket_analysis, edge_metrics,
 
 META_COLS = {"symbol", "date", "mr_time"}
 
+# outcome-label prefixes that must NEVER appear as predictors (lookahead guard)
+OUTCOME_PREFIXES = ("cont_", "go_", "revert_", "rev_", "tb_", "filled_")
+
 
 def _factor_cols(df: pd.DataFrame, target: str, all_targets: list[str]) -> list[str]:
     skip = META_COLS | set(all_targets)
     return [c for c in df.columns
-            if c not in skip and pd.api.types.is_numeric_dtype(df[c])]
+            if c not in skip
+            and not c.startswith(OUTCOME_PREFIXES)
+            and pd.api.types.is_numeric_dtype(df[c])]
 
 
 # ======================================================================
@@ -129,8 +134,12 @@ def level3_cumulative(panel: pd.DataFrame, target: str,
 
     cols = _factor_cols(panel, target, all_targets)
     sub = panel.dropna(subset=[target])
-    X, y = sub[cols], sub[target]
     train, test = train_test_split_by_date(sub, TRAIN_END)
+    # drop columns that are constant or (near-)all-NaN in EITHER split:
+    # they break tree binning and carry no signal
+    cols = [c for c in cols
+            if train[c].notna().sum() >= 50 and train[c].nunique(dropna=True) >= 2
+            and test[c].nunique(dropna=True) >= 1]
     if len(train) < 500 or len(test) < 200:
         return {"error": "not enough events for cumulative model"}
 

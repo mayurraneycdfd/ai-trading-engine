@@ -1,0 +1,2 @@
+combo,n_factors,is_n,is_mean,is_win,is_p,oos_confirmed,oos_is_mean,oos_oos_mean,oos_oos_win_rate,oos_oos_n,fdr_pass
+"rvol_20d in (1.078, 1.117] AND rvol_open30 in (1.404, 1.651]",2,133,0.04595460789045236,0.518796992481203,0.12671587928601552,True,0.04595460789045236,0.05689078136898559,0.5858267716535434,635,False
