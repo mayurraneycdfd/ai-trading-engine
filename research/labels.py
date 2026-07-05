@@ -86,8 +86,7 @@ def gap_go_labels(minute: pd.DataFrame, gap_pct: pd.Series) -> pd.DataFrame:
         row["cont_close"] = sign * (day["close"].iloc[-1] - o) / o * 100
         # path-aware triple-barrier outcome for a gap-direction trade at open
         atr = _day_atr_pct(day, 5)
-        row.update({f"tb_{k}": v for k, v in
-                    triple_barrier(day, 0, sign, atr).items()})
+        row.update(triple_barrier(day, 0, sign, atr))  # keys tb_ret / tb_hit
         out[d] = row
     return pd.DataFrame.from_dict(out, orient="index")
 
@@ -126,8 +125,7 @@ def mean_reversion_labels(minute: pd.DataFrame) -> pd.DataFrame:
             row[f"revert_{h}m"] = direction * (px - p0) / p0 * 100
             row[f"rev_{h}m"] = int(row[f"revert_{h}m"] > 0)
         atr = _day_atr_pct(day, i)
-        row.update({f"tb_{k}": v for k, v in
-                    triple_barrier(day, i, direction, atr).items()})
+        row.update(triple_barrier(day, i, direction, atr))  # keys tb_ret / tb_hit
         out[pd.Timestamp(date)] = row
     return pd.DataFrame.from_dict(out, orient="index")
 

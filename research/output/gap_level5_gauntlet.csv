@@ -1,10 +1,11 @@
 rule,n_events,cv_fold_means,cv_positive_folds,cv_pass,perm_p,perm_pass,net_mean,boot_ci_5_95,boot_pass,dsr,dsr_pass,n_trials_deflated_for,pbo,pbo_pass,gauntlet_score,grade
-L1:tb_tb_ret,953,"[0.1831, 0.2535, 0.2732, 0.2256, 0.2257]",5/5,True,0.002,True,0.174,"(0.1608, 0.1891)",True,1.0,True,619,0.0,True,5/5,PLATINUM
-L6:tb_tb_ret,463,"[0.2828, 0.2942, 0.333, 0.2615, 0.2997]",5/5,True,0.002,True,0.2333,"(0.2149, 0.2515)",True,1.0,True,619,0.0,True,5/5,PLATINUM
-"L6:mul(rank(gap_abs), tb_tb_ret)",463,"[0.263, 0.2717, 0.3314, 0.2539, 0.2584]",5/5,True,0.002,True,0.216,"(0.1932, 0.237)",True,1.0,True,619,0.0,True,5/5,PLATINUM
-L6:log1p_abs(rvol_open30),453,"[-0.0416, 0.0937, 0.0449, 0.0152, 0.0537]",4/5,True,0.02,True,-0.0286,"(-0.0499, -0.0087)",False,0.0,False,619,0.0,True,3/5,SILVER
-L6:rvol_open30,453,"[-0.0416, 0.0937, 0.0449, 0.0152, 0.0537]",4/5,True,0.02,True,-0.0286,"(-0.0499, -0.0087)",False,0.0,False,619,0.0,True,3/5,SILVER
-L6:rvol_20d,453,"[-0.0125, 0.1386, 0.0151, 0.0387, 0.02]",4/5,True,0.014,True,-0.0238,"(-0.0475, -0.0007)",False,0.0,False,619,0.0,True,3/5,SILVER
-L6:log1p_abs(rvol_20d),453,"[-0.0125, 0.1386, 0.0151, 0.0387, 0.02]",4/5,True,0.014,True,-0.0238,"(-0.0475, -0.0007)",False,0.0,False,619,0.0,True,3/5,SILVER
-"L6:abs(min(zscore_20d, tb_tb_ret))",462,"[-0.0018, 0.0493, 0.0694, 0.0837, 0.0561]",4/5,True,0.002,True,-0.0053,"(-0.0238, 0.0123)",False,0.0002,False,619,0.0,True,3/5,SILVER
-"L6:add(sub(rvol_open30, nifty_ret_5d), nifty_ret_1d)",453,"[0.0085, 0.0769, 0.0099, 0.0708, 0.0414]",5/5,True,0.016,True,-0.0223,"(-0.0463, 0.0015)",False,0.0,False,619,0.0,True,3/5,SILVER
+"L6:sub(rvol_open30, rank(sub(nifty_ret_5d, zscore_20d)))",453,"[0.0188, 0.0686, 0.0388, 0.031, 0.0965]",5/5,True,0.002,True,-0.0045,"(-0.0256, 0.0187)",False,0.0003,False,702,0.429,True,3/5,SILVER
+L6:rvol_20d,453,"[-0.0125, 0.1386, 0.0151, 0.0387, 0.02]",4/5,True,0.014,True,-0.0238,"(-0.0475, -0.0007)",False,0.0,False,702,0.429,True,3/5,SILVER
+"L6:sub(rvol_20d, rank(sub(nifty_ret_5d, rvol_20d)))",453,"[-0.0094, 0.0632, 0.0571, 0.1135, 0.0915]",4/5,True,0.002,True,0.0025,"(-0.0198, 0.0245)",False,0.0014,False,702,0.429,True,3/5,SILVER
+"L6:sub(rvol_20d, rank(nifty_ret_5d))",453,"[0.0026, 0.0665, 0.0488, 0.1207, 0.0932]",5/5,True,0.002,True,0.008,"(-0.0151, 0.031)",False,0.0043,False,702,0.429,True,3/5,SILVER
+"L6:sub(rvol_20d, rank(sub(nifty_ret_5d, mkt_gap_median)))",453,"[0.0323, 0.0226, 0.031, 0.112, 0.0789]",5/5,True,0.002,True,0.0015,"(-0.0232, 0.0286)",False,0.0011,False,702,0.429,True,3/5,SILVER
+"L6:sub(sub(nifty_ret_5d, rvol_20d), rvol_open30)",452,"[0.0171, 0.057, 0.0332, 0.1027, 0.0445]",5/5,True,0.004,True,-0.0117,"(-0.0385, 0.0151)",False,0.0,False,702,0.429,True,3/5,SILVER
+"L6:sub(rvol_20d, rank(sub(nifty_ret_5d, zscore_20d)))",453,"[0.0459, 0.0907, 0.026, 0.0399, 0.0537]",5/5,True,0.004,True,-0.0113,"(-0.0336, 0.0113)",False,0.0001,False,702,0.429,True,3/5,SILVER
+"L6:sub(rvol_20d, rank(sub(nifty_ret_5d, gap_idiosyncratic)))",453,"[0.0056, 0.0929, 0.028, 0.1345, 0.1217]",5/5,True,0.002,True,0.01,"(-0.0166, 0.0378)",False,0.0062,False,702,0.429,True,3/5,SILVER
+"L6:sub(nifty_ret_5d, rvol_open30)",452,"[0.0181, 0.0626, 0.0274, 0.1039, 0.0477]",5/5,True,0.004,True,-0.0121,"(-0.0378, 0.0154)",False,0.0,False,702,0.429,True,3/5,SILVER
+"L6:sub(rvol_20d, rank(sub(nifty_ret_5d, nifty_ret_1d)))",453,"[0.0036, 0.0622, -0.0207, 0.0977, 0.0829]",4/5,True,0.004,True,-0.013,"(-0.0366, 0.0108)",False,0.0,False,702,0.429,True,3/5,SILVER

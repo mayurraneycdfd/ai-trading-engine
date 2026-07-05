@@ -26,11 +26,16 @@ from stats import (benjamini_hochberg, bucket_analysis, edge_metrics,
 
 META_COLS = {"symbol", "date", "mr_time"}
 
+# outcome-label prefixes that must NEVER appear as predictors (lookahead guard)
+OUTCOME_PREFIXES = ("cont_", "go_", "revert_", "rev_", "tb_", "filled_")
+
 
 def _factor_cols(df: pd.DataFrame, target: str, all_targets: list[str]) -> list[str]:
     skip = META_COLS | set(all_targets)
     return [c for c in df.columns
-            if c not in skip and pd.api.types.is_numeric_dtype(df[c])]
+            if c not in skip
+            and not c.startswith(OUTCOME_PREFIXES)
+            and pd.api.types.is_numeric_dtype(df[c])]
 
 
 # ======================================================================

@@ -1,11 +1,11 @@
 formula,train_ic,oos_ic,oos_p,oos_n,same_sign,confirmed
-tb_tb_ret,0.4813,0.5318,3.639410490399777e-265,3643,True,True
-"mul(rank(gap_abs), tb_tb_ret)",0.4406,0.5027,1.3911408364845559e-232,3643,True,True
-log1p_abs(rvol_open30),0.039,0.0969,4.56251359037566e-09,3643,True,True
-rvol_open30,0.039,0.0969,4.56251359037566e-09,3643,True,True
+"sub(rvol_open30, rank(sub(nifty_ret_5d, zscore_20d)))",0.0815,0.1028,5.039529938489104e-10,3643,True,True
 rvol_20d,0.0498,0.0931,1.7843275709085302e-08,3643,True,True
-log1p_abs(rvol_20d),0.0498,0.0931,1.7843275709085302e-08,3643,True,True
-"abs(min(zscore_20d, tb_tb_ret))",0.0654,-0.0765,3.843803226325181e-06,3643,True,True
-"add(sub(rvol_open30, nifty_ret_5d), nifty_ret_1d)",0.0764,0.0359,0.03041266442875861,3643,True,True
-"sub(rvol_20d, nifty_ret_5d)",0.0679,0.0219,0.186049070741807,3643,True,False
-nifty_ret_1d,0.022,-0.02,0.22675490082285626,3643,True,False
+"sub(rvol_20d, rank(sub(nifty_ret_5d, rvol_20d)))",0.0834,0.0553,0.0008361451096897055,3643,True,True
+"sub(rvol_20d, rank(nifty_ret_5d))",0.081,0.0509,0.0021032989323074023,3643,True,True
+"sub(rvol_20d, rank(sub(nifty_ret_5d, mkt_gap_median)))",0.075,0.0493,0.002937241275906345,3643,True,True
+"sub(sub(nifty_ret_5d, rvol_20d), rvol_open30)",0.0797,-0.0475,0.004099248949185106,3643,True,True
+"sub(rvol_20d, rank(sub(nifty_ret_5d, zscore_20d)))",0.0964,0.0453,0.006194722102651115,3643,True,True
+"sub(rvol_20d, rank(sub(nifty_ret_5d, gap_idiosyncratic)))",0.0671,0.0452,0.006353402274418198,3643,True,True
+"sub(nifty_ret_5d, rvol_open30)",0.0778,-0.0433,0.008889992330732916,3643,True,True
+"sub(rvol_20d, rank(sub(nifty_ret_5d, nifty_ret_1d)))",0.0772,0.0405,0.014434203225693859,3643,True,True

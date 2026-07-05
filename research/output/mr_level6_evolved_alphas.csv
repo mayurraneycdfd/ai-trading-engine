@@ -1,11 +1,11 @@
 formula,train_ic,oos_ic,oos_p,oos_n,same_sign,confirmed
-"mul(div(tb_tb_ret, rv20), rv20)",0.5395,0.4931,2.9613274503877976e-266,4365,True,True
-"div(mul(tb_tb_ret, rv20), rv20)",0.5395,0.4931,2.9613274503877976e-266,4365,True,True
-tb_tb_ret,0.5233,0.4931,2.9613274503877976e-266,4365,True,True
-"max(tb_tb_ret, tb_tb_ret)",0.5233,0.4931,2.9613274503877976e-266,4365,True,True
-"div(tb_tb_ret, rvol_20d)",0.5334,0.4911,7.618215356840451e-264,4365,True,True
-"mul(mul(div(tb_tb_ret, rv20), rv20), rvol_20d)",0.5392,0.4909,1.3979021966231513e-263,4365,True,True
-"mul(tb_tb_ret, rvol_20d)",0.5367,0.4909,1.3979021966231513e-263,4365,True,True
-"mul(neg(tb_tb_ret), rv20)",0.5355,-0.4899,2.3941439197599375e-262,4365,True,True
-"mul(mul(div(tb_tb_ret, rv20), rv20), rv20)",0.5355,0.4899,2.3941439197599375e-262,4365,True,True
-"mul(tb_tb_ret, rv20)",0.5355,0.4899,2.3941439197599375e-262,4365,True,True
+"rank(sub(sub(ret_5d, gap_pct), div(gap_pct, rvol_20d)))",0.0831,0.0263,0.08181318961663933,4365,True,False
+"rank(sub(ret_5d, div(gap_pct, rvol_20d)))",0.0749,0.0255,0.09198869824953054,4365,True,False
+"add(add(gap_vs_atr, sub(ret_5d, gap_pct)), sub(ret_5d, gap_pct))",0.0798,0.0249,0.09995855802804998,4365,True,False
+"add(gap_vs_atr, ret_5d)",0.0694,0.0243,0.10874773840830827,4365,True,False
+"rank(add(gap_vs_atr, ret_5d))",0.0694,0.0243,0.10874773840830827,4365,True,False
+"add(log1p_abs(gap_vs_atr), ret_5d)",0.068,0.0243,0.10809838706662601,4365,True,False
+"add(add(gap_vs_atr, sub(ret_5d, gap_pct)), rank(ret_5d))",0.0803,0.0242,0.10952552590676563,4365,True,False
+"add(rank(rank(ret_5d)), add(gap_vs_atr, sub(ret_5d, gap_pct)))",0.0803,0.0242,0.10952552590676563,4365,True,False
+"add(add(gap_vs_atr, sub(ret_5d, gap_pct)), add(gap_vs_atr, sub(ret_5d, gap_pct)))",0.081,0.0241,0.11099558408992743,4365,True,False
+"add(gap_vs_atr, sub(ret_5d, gap_pct))",0.081,0.0241,0.11099558408992743,4365,True,False
