@@ -35,9 +35,15 @@ from config import (BOOTSTRAP_BLOCK, COST_PCT, CSCV_SPLITS, EMBARGO_DAYS,
 
 
 # ----------------------------------------------------------------- helpers -
-def net_returns(gross: pd.Series) -> pd.Series:
-    """Deduct round-trip costs from every event return (both in %)."""
-    return gross.dropna() - COST_PCT
+def net_returns(gross: pd.Series, costs: pd.Series | None = None) -> pd.Series:
+    """Deduct round-trip costs from every event return (both in %).
+    Uses PER-EVENT costs (from execution.py) when provided; the flat
+    COST_PCT is only the fallback for panels without a cost model."""
+    g = gross.dropna()
+    if costs is not None:
+        c = costs.reindex(g.index).fillna(COST_PCT)
+        return g - c
+    return g - COST_PCT
 
 
 def _annualised_sharpe(r: pd.Series) -> float:
@@ -219,13 +225,25 @@ def run_gauntlet(panel: pd.DataFrame, mask: pd.Series, target: str,
                  family_returns: dict[str, pd.Series] | None = None) -> dict:
     """Run all five tests on one rule. `mask` selects the events the rule
     trades; `n_trials` = total hypotheses tested during discovery (for DSR);
-    `family_returns` = sibling rules for the CSCV/PBO family test."""
+    `family_returns` = sibling rules for the CSCV/PBO family test.
+    If the panel carries a per-event `cost_pct` column (execution.py), every
+    return is netted with the trade's OWN cost, not a flat assumption."""
     sel = panel.loc[mask.fillna(False)]
-    rets = sel[target]
-    dates = sel["date"]
+    costs = sel["cost_pct"] if "cost_pct" in sel.columns else None
+    rets_gross = sel[target]
+    rets = net_returns(rets_gross, costs) + COST_PCT  # keep gross for tests
+    # tests below subtract COST_PCT internally; pre-adjust so the flat
+    # subtraction lands on the per-event-netted value
+    dates = sel["date"].reindex(rets.index)
     res = {"rule": rule_name, "n_events": len(sel)}
-    res.update(purged_walkforward(dates, rets))
-    res.update(permutation_test(panel["date"], mask.fillna(False), panel[target]))
+    if costs is not None:
+        res["cost_mean_pct"] = round(float(costs.mean()), 4)
+    # walkforward consistency is checked on FULLY NET returns
+    res.update(purged_walkforward(dates, rets - COST_PCT))
+    adj_target = panel[target].copy()
+    if "cost_pct" in panel.columns:
+        adj_target = adj_target - panel["cost_pct"] + COST_PCT
+    res.update(permutation_test(panel["date"], mask.fillna(False), adj_target))
     res.update(block_bootstrap_ci(rets))
     res.update(deflated_sharpe(rets, max(n_trials, 2)))
     if family_returns:
