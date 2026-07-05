@@ -129,8 +129,12 @@ def level3_cumulative(panel: pd.DataFrame, target: str,
 
     cols = _factor_cols(panel, target, all_targets)
     sub = panel.dropna(subset=[target])
-    X, y = sub[cols], sub[target]
     train, test = train_test_split_by_date(sub, TRAIN_END)
+    # drop columns that are constant or (near-)all-NaN in EITHER split:
+    # they break tree binning and carry no signal
+    cols = [c for c in cols
+            if train[c].notna().sum() >= 50 and train[c].nunique(dropna=True) >= 2
+            and test[c].nunique(dropna=True) >= 1]
     if len(train) < 500 or len(test) < 200:
         return {"error": "not enough events for cumulative model"}
 

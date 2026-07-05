@@ -28,6 +28,7 @@ sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 import data_loader as dl
 import edge_discovery as ed
 import features as feat
+import hidden_edges as he
 import labels as lab
 from config import GAP_GO_HORIZONS, MR_HORIZONS, OUT_DIR
 
@@ -75,7 +76,7 @@ def build_panel(symbols: list[str]) -> tuple[pd.DataFrame, pd.DataFrame]:
 def run_strategy(panel: pd.DataFrame, name: str, target: str, all_targets: list[str]):
     if panel.empty:
         print(f"  [{name}] no events found -- check data paths in config.py")
-        return None, None, None
+        return None, None, None, None
     print(f"\n=== {name.upper()}  target={target}  events={len(panel)} ===")
 
     l1 = ed.level1_single_factors(panel, target, all_targets)
@@ -96,12 +97,23 @@ def run_strategy(panel: pd.DataFrame, name: str, target: str, all_targets: list[
     if "error" not in l3:
         print(f"  level 3: OOS rank IC = {l3['oos_rank_ic']:.3f}, "
               f"long-short spread = {l3['oos_long_short_spread']:.3f}%")
-    return l1, l2, l3
+
+    # LEVEL 4: hidden-edge detectors (thresholds, regimes, decay, lead-lag,
+    # sequences, anomaly precursors, clustering, calendar)
+    l4 = he.run_all(panel, target, all_targets, level1=l1)
+    for det_name, df in l4.items():
+        if df is not None and not df.empty:
+            df.to_csv(OUT_DIR / f"{name}_level4_{det_name}.csv")
+            n_conf = int(df.get("confirmed", pd.Series(dtype=bool)).sum()) \
+                if "confirmed" in df.columns else 0
+            print(f"  level 4 [{det_name}]: {len(df)} candidates, "
+                  f"{n_conf} confirmed OOS")
+    return l1, l2, l3, l4
 
 
 def write_summary(results: dict):
     lines = ["# Confirmed Edges (out-of-sample + FDR survivors)\n"]
-    for name, (l1, l2, l3) in results.items():
+    for name, (l1, l2, l3, l4) in results.items():
         lines.append(f"\n## {name}\n")
         if l1 is not None and not l1.empty:
             conf = l1[l1["fdr_pass"] & l1["confirmed"]]
@@ -120,6 +132,30 @@ def write_summary(results: dict):
             lines.append(f"- OOS rank IC: {l3['oos_rank_ic']:.3f}")
             lines.append(f"- Top-decile OOS mean: {l3['oos_top_decile'].get('mean_ret', float('nan')):.3f}%")
             lines.append("- Top drivers: " + ", ".join(l3["feature_importance"].head(8).index))
+        if l4:
+            lines.append("\n### Hidden-edge detectors (level 4)\n")
+            for det, df in l4.items():
+                if df is None or df.empty:
+                    continue
+                if det == "C_edge_decay":
+                    for _, r in df.iterrows():
+                        lines.append(f"- [decay] {r['rule']}: {r['status']} "
+                                     f"(early {r['early_mean']:.3f}% -> "
+                                     f"recent {r['recent_mean']:.3f}%)")
+                    continue
+                if "confirmed" not in df.columns:
+                    continue
+                conf = df[df["confirmed"] == True]  # noqa: E712
+                if "fdr_pass" in df.columns:
+                    conf = conf[conf["fdr_pass"]]
+                for idx, r in conf.head(10).iterrows():
+                    label = (r.get("rule") or r.get("pattern") or r.get("condition")
+                             or r.get("anomaly")
+                             or (f"{r.get('regime', '')} {r.get('factor', '')}".strip())
+                             or str(idx))
+                    oos = r.get("oos_mean", r.get("oos_rank_ic", float("nan")))
+                    lines.append(f"- [{det}] {label}: OOS {oos:.3f}, "
+                                 f"n={int(r.get('oos_n', r.get('n', 0)))}")
     (OUT_DIR / "confirmed_edges.md").write_text("\n".join(lines))
     print(f"\nSummary written to {OUT_DIR / 'confirmed_edges.md'}")
 

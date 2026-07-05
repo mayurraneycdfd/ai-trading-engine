@@ -49,4 +49,4 @@ COMBO_MAX_FACTORS = 3      # max factors in combination search
 COMBO_TOP_SINGLE = 15      # only combine top-N single factors (combinatorial control)
 
 # ------------------------------------------------------------- outputs -----
-OUT_DIR = Path("research/output")
+OUT_DIR = Path(__file__).parent / "output"
