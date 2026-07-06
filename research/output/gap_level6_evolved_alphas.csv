@@ -1,11 +1,11 @@
-formula,train_ic,oos_ic,oos_p,oos_n,same_sign,confirmed
-"sub(rvol_open30, rank(sub(nifty_ret_5d, zscore_20d)))",0.0815,0.1028,5.039529938489104e-10,3643,True,True
-rvol_20d,0.0498,0.0931,1.7843275709085302e-08,3643,True,True
-"sub(rvol_20d, rank(sub(nifty_ret_5d, rvol_20d)))",0.0834,0.0553,0.0008361451096897055,3643,True,True
-"sub(rvol_20d, rank(nifty_ret_5d))",0.081,0.0509,0.0021032989323074023,3643,True,True
-"sub(rvol_20d, rank(sub(nifty_ret_5d, mkt_gap_median)))",0.075,0.0493,0.002937241275906345,3643,True,True
-"sub(sub(nifty_ret_5d, rvol_20d), rvol_open30)",0.0797,-0.0475,0.004099248949185106,3643,True,True
-"sub(rvol_20d, rank(sub(nifty_ret_5d, zscore_20d)))",0.0964,0.0453,0.006194722102651115,3643,True,True
-"sub(rvol_20d, rank(sub(nifty_ret_5d, gap_idiosyncratic)))",0.0671,0.0452,0.006353402274418198,3643,True,True
-"sub(nifty_ret_5d, rvol_open30)",0.0778,-0.0433,0.008889992330732916,3643,True,True
-"sub(rvol_20d, rank(sub(nifty_ret_5d, nifty_ret_1d)))",0.0772,0.0405,0.014434203225693859,3643,True,True
+formula,train_ic,oos_ic,oos_p,oos_n,same_sign,mt_consistent,mt_agree,confirmed
+rvol_open30,0.039,0.0969,4.56251359037566e-09,3643,True,True,4/4,True
+ts_mean5(rvol_open30),0.0285,0.0542,0.0011227071713612827,3611,True,True,4/4,True
+ts_mean5(ts_z10(gap_pct)),0.0281,-0.0434,0.009900978511119866,3539,False,True,4/4,False
+"ts_mean5(ts_z10(mul(zscore_20d, rvol_open30)))",0.0548,-0.0414,0.013698576522097309,3539,False,True,4/4,False
+ts_mean5(ts_z10(ret_5d)),0.0608,-0.0394,0.018971402293331028,3539,False,True,4/4,False
+"ts_mean5(ts_delta5(add(zscore_20d, ret_1d)))",0.0491,-0.038,0.023178458005336643,3571,False,True,4/4,False
+ts_mean5(ts_z10(zscore_20d)),0.0568,-0.034,0.04307164352969904,3539,False,True,3/4,False
+"min(ts_std10(range_compression), ts_z10(nifty_ret_5d))",-0.0429,-0.0318,0.05745706038206259,3571,True,True,4/4,False
+"ts_mean5(div(ret_20d, atr14_pct))",-0.0509,0.0309,0.06326066659871163,3611,False,True,4/4,False
+ts_mean5(ret_20d),-0.0529,0.0306,0.06555585394262334,3611,False,True,3/4,False

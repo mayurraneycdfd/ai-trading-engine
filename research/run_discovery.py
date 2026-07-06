@@ -116,9 +116,17 @@ def run_strategy(panel: pd.DataFrame, name: str, target: str, all_targets: list[
             print(f"  level 4 [{det_name}]: {len(df)} candidates, "
                   f"{n_conf} confirmed OOS")
 
-    # LEVEL 6: genetic-programming alpha miner (evolves NEW formulas)
+    # LEVEL 6: genetic-programming alpha miner (evolves NEW formulas).
+    # Sibling continuous horizons act as a multi-target consistency check:
+    # a real alpha should predict neighbouring horizons with the same sign.
     factor_cols = ed._factor_cols(panel, target, all_targets)
-    l6 = als.evolve_alphas(panel.dropna(subset=[target]), target, factor_cols)
+    siblings = [t for t in all_targets
+                if t != target and t in panel.columns
+                and not t.startswith(("go_", "rev_", "filled_", "tb_hit"))
+                and pd.api.types.is_numeric_dtype(panel[t])
+                and panel[t].abs().max() > 1.5][:4]
+    l6 = als.evolve_alphas(panel.dropna(subset=[target]), target, factor_cols,
+                           related_targets=siblings)
     if not l6.empty:
         l6.drop(columns=["tree"]).to_csv(
             OUT_DIR / f"{name}_level6_evolved_alphas.csv", index=False)

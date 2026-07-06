@@ -43,25 +43,39 @@ def _factor_cols(df: pd.DataFrame, target: str, all_targets: list[str]) -> list[
 # ======================================================================
 def level1_single_factors(panel: pd.DataFrame, target: str,
                           all_targets: list[str]) -> pd.DataFrame:
-    train, test = train_test_split_by_date(panel, TRAIN_END)
+    # NET-OF-COST SCREENING: when the panel carries per-event costs, screen
+    # on net returns so factors whose edge is eaten by execution never rank.
+    # (Binary hit-rate targets like go_30m are screened gross by design.)
+    work = panel
+    net_col = None
+    if "cost_pct" in panel.columns and panel[target].abs().max() > 1.5:
+        net_col = f"__net_{target}"
+        work = panel.copy()
+        work[net_col] = work[target] - work["cost_pct"]
+    tcol = net_col or target
+    train, test = train_test_split_by_date(work, TRAIN_END)
     rows = []
-    for factor in _factor_cols(panel, target, all_targets):
-        b = bucket_analysis(train, factor, target, N_BUCKETS, MIN_EVENTS)
+    for factor in _factor_cols(work, target, all_targets + [tcol]):
+        b = bucket_analysis(train, factor, tcol, N_BUCKETS, MIN_EVENTS)
         if b is None:
             continue
         score = factor_score(b)
         score["factor"] = factor
-        # OOS check on the best bucket condition
+        # OOS check on the best bucket condition -- Kish effective-N t-stats
+        # via the date column so same-day correlated events don't fake edges
         best_mask_train = _bucket_mask(train, factor, score["best_bucket"])
         best_mask_test = _bucket_mask(test, factor, score["best_bucket"])
-        tr_m = edge_metrics(train.loc[best_mask_train, target])
-        te_m = edge_metrics(test.loc[best_mask_test, target])
+        tr_m = edge_metrics(train.loc[best_mask_train, tcol],
+                            train.loc[best_mask_train, "date"])
+        te_m = edge_metrics(test.loc[best_mask_test, tcol],
+                            test.loc[best_mask_test, "date"])
         score.update(oos_confirmation(tr_m, te_m))
         rows.append(score)
     if not rows:
         return pd.DataFrame()
     res = pd.DataFrame(rows).set_index("factor")
     res["fdr_pass"] = benjamini_hochberg(res["best_p"], FDR_ALPHA)
+    res.attrs["screened_net"] = net_col is not None
     return res.sort_values("spread", ascending=False)
 
 
@@ -102,8 +116,8 @@ def level2_combinations(panel: pd.DataFrame, target: str,
                 m_te &= _bucket_mask(test, f, conditions[f])
             if m_tr.sum() < MIN_EVENTS:
                 continue
-            tr_m = edge_metrics(train.loc[m_tr, target])
-            te_m = edge_metrics(test.loc[m_te, target])
+            tr_m = edge_metrics(train.loc[m_tr, target], train.loc[m_tr, "date"])
+            te_m = edge_metrics(test.loc[m_te, target], test.loc[m_te, "date"])
             row = {
                 "combo": " AND ".join(f"{f} in {conditions[f]}" for f in combo),
                 "n_factors": k,

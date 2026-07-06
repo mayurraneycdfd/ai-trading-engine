@@ -18,30 +18,28 @@ pass 2/2: features and labels per stock...
 
 === GAP  target=cont_30m  events=4620 ===
   level 1: 25 factors tested, 0 confirmed OOS + FDR
-  level 2: 1 combos tested, 0 confirmed
-  level 3: OOS rank IC = 0.019, long-short spread = 0.070%
-  level 4 [A_optimal_thresholds]: 21 candidates, 8 confirmed OOS
-  level 4 [B_regime_conditional]: 94 candidates, 11 confirmed OOS
+  level 3: OOS rank IC = 0.024, long-short spread = 0.048%
+  level 4 [A_optimal_thresholds]: 21 candidates, 1 confirmed OOS
+  level 4 [B_regime_conditional]: 94 candidates, 4 confirmed OOS
   level 4 [D_lead_lag]: 30 candidates, 7 confirmed OOS
-  level 4 [E_sequence_patterns]: 14 candidates, 2 confirmed OOS
-  level 4 [H_calendar]: 9 candidates, 2 confirmed OOS
-  level 4 [C_edge_decay]: 8 candidates, 0 confirmed OOS
-  level 6: 10 evolved alphas, 10 confirmed OOS
-  level 5 gauntlet: 10 rules tested -> 0 PLATINUM, 0 GOLD (net of costs, deflated for 702 trials)
-  gp review: 10 evolved alphas need human sign-off (5 flagged as likely factor re-discoveries)
-  GP review pack: 10 evolved alphas await human approval (approved=False by default)
+  level 4 [E_sequence_patterns]: 14 candidates, 0 confirmed OOS
+  level 4 [H_calendar]: 9 candidates, 0 confirmed OOS
+  level 4 [C_edge_decay]: 1 candidates, 0 confirmed OOS
+  level 6: 10 evolved alphas, 2 confirmed OOS
+  level 5 gauntlet: 2 rules tested -> 0 PLATINUM, 0 GOLD (net of costs, deflated for 694 trials)
+  gp review: 2 evolved alphas need human sign-off (1 flagged as likely factor re-discoveries)
+  GP review pack: 2 evolved alphas await human approval (approved=False by default)
 
 === MR  target=revert_30m  events=5563 ===
   level 1: 25 factors tested, 0 confirmed OOS + FDR
-  level 2: 4 combos tested, 0 confirmed
-  level 3: OOS rank IC = 0.014, long-short spread = -0.004%
-  level 4 [A_optimal_thresholds]: 21 candidates, 8 confirmed OOS
-  level 4 [B_regime_conditional]: 95 candidates, 8 confirmed OOS
+  level 2: 2 combos tested, 0 confirmed
+  level 3: OOS rank IC = 0.009, long-short spread = 0.007%
+  level 4 [A_optimal_thresholds]: 21 candidates, 0 confirmed OOS
+  level 4 [B_regime_conditional]: 95 candidates, 0 confirmed OOS
   level 4 [D_lead_lag]: 30 candidates, 9 confirmed OOS
-  level 4 [E_sequence_patterns]: 14 candidates, 6 confirmed OOS
-  level 4 [G_hidden_regimes]: 4 candidates, 1 confirmed OOS
-  level 4 [H_calendar]: 17 candidates, 4 confirmed OOS
-  level 4 [C_edge_decay]: 8 candidates, 0 confirmed OOS
+  level 4 [E_sequence_patterns]: 14 candidates, 0 confirmed OOS
+  level 4 [G_hidden_regimes]: 4 candidates, 0 confirmed OOS
+  level 4 [H_calendar]: 17 candidates, 1 confirmed OOS
   level 6: 10 evolved alphas, 0 confirmed OOS
 
 Summary written to /vercel/share/v0-project/research/output/confirmed_edges.md
