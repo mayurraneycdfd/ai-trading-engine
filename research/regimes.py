@@ -42,8 +42,18 @@ def fit_market_regimes(panel: pd.DataFrame,
     if len(day) < 200:
         return None
     tr = day[day.index <= pd.Timestamp(TRAIN_END)]
+    if len(tr) < 100:
+        return None
     mu, sd = tr.mean(), tr.std().replace(0, np.nan)
+    # drop state columns that are constant (sd NaN) in the train window --
+    # they would NaN-out every z-scored row and empty the fit sample
+    good = sd.dropna().index.tolist()
+    if len(good) < 3:
+        return None
+    day, tr, mu, sd = day[good], tr[good], mu[good], sd[good]
     z_tr = ((tr - mu) / sd).dropna()
+    if len(z_tr) < 100:
+        return None
     gmm = GaussianMixture(n_components=n_regimes, covariance_type="full",
                           random_state=42, n_init=3)
     gmm.fit(z_tr)

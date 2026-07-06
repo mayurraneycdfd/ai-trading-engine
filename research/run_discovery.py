@@ -378,6 +378,23 @@ def write_summary(results: dict):
             for _, r in l8["capacity"].iterrows():
                 lines.append(f"- capacity {r['rule']}: "
                              f"Rs {r['max_notional_inr']:,.0f}/trade")
+        if l9 is not None and isinstance(l9, pd.DataFrame) and not l9.empty:
+            lines.append("\n### SPA family-wise stepdown (level 9)\n")
+            lines.append("Controls the probability of even ONE false edge "
+                         "in the traded family (Romano-Wolf).\n")
+            for _, r in l9.iterrows():
+                status = "SURVIVES" if r["spa_confirmed"] else "FAILS"
+                lines.append(f"- **{status}** {r['rule']}: "
+                             f"stat {r['spa_stat']}, p={r['spa_p']}")
+        if l10 is not None and isinstance(l10, pd.DataFrame) and not l10.empty:
+            lines.append("\n### Meta-labeling + Kelly sizing (level 10)\n")
+            for _, r in l10.iterrows():
+                verdict = "IMPROVES" if r.get("improves") else "no gain"
+                lines.append(
+                    f"- {r['rule']}: base {r.get('base_mean', float('nan')):.3f}% "
+                    f"-> filtered {r.get('filtered_mean', float('nan')):.3f}% "
+                    f"(kept {r.get('kept_frac', float('nan')):.0%} of trades, "
+                    f"AUC {r.get('auc', float('nan')):.2f}) [{verdict}]")
     (OUT_DIR / "confirmed_edges.md").write_text("\n".join(lines))
     print(f"\nSummary written to {OUT_DIR / 'confirmed_edges.md'}")
 
