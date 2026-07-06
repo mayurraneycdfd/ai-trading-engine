@@ -27,11 +27,15 @@ import pandas as pd
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent))
 
 import alpha_search as als
+import data_audit as aud
 import data_loader as dl
 import edge_discovery as ed
+import execution as exe
 import features as feat
 import hidden_edges as he
 import labels as lab
+import portfolio as port
+import robustness as rob
 import validation as val
 from config import GAP_GO_HORIZONS, MR_HORIZONS, OUT_DIR
 
@@ -79,7 +83,7 @@ def build_panel(symbols: list[str]) -> tuple[pd.DataFrame, pd.DataFrame]:
 def run_strategy(panel: pd.DataFrame, name: str, target: str, all_targets: list[str]):
     if panel.empty:
         print(f"  [{name}] no events found -- check data paths in config.py")
-        return None, None, None, None, None, None
+        return None, None, None, None, None, None, None, None
     print(f"\n=== {name.upper()}  target={target}  events={len(panel)} ===")
 
     l1 = ed.level1_single_factors(panel, target, all_targets)
@@ -164,7 +168,57 @@ def run_strategy(panel: pd.DataFrame, name: str, target: str, all_targets: list[
         print(f"  level 5 gauntlet: {len(l5)} rules tested -> "
               f"{n_plat} PLATINUM, {n_gold} GOLD "
               f"(net of costs, deflated for {n_trials} trials)")
-    return l1, l2, l3, l4, l5, l6
+
+    # collect the trade masks of every gauntlet-surviving rule (>= GOLD)
+    all_masks: dict[str, pd.Series] = {}
+    if not l5.empty:
+        keep = set(l5.loc[l5["grade"].isin(["PLATINUM", "GOLD"]), "rule"])
+        for f in conf1_idx:
+            if f"L1:{f}" in keep:
+                all_masks[f"L1:{f}"] = ed._bucket_mask(
+                    panel, f, str(l1.loc[f, "best_bucket"]))
+        for rname, m in l6_masks.items():
+            if rname in keep:
+                all_masks[rname] = m
+
+    # STAGE 7: multi-boundary robustness -- edges must survive alternative
+    # train/test cuts, not just the single TRAIN_END choice
+    if all_masks:
+        l7 = rob.multi_boundary(panel, all_masks, target)
+        l7.to_csv(OUT_DIR / f"{name}_level7_boundary_robustness.csv", index=False)
+        n_rob = int(l7["boundary_robust"].sum())
+        print(f"  level 7 boundaries: {len(l7)} rules -> {n_rob} robust "
+              f"across cuts")
+        # drop non-robust edges from the tradeable set
+        robust = set(l7.loc[l7["boundary_robust"], "rule"])
+        all_masks = {k: v for k, v in all_masks.items() if k in robust}
+    else:
+        l7 = pd.DataFrame()
+
+    # GP interpretability review pack (evolved alphas need human approval)
+    if not l6.empty:
+        factor_cols2 = ed._factor_cols(panel, target, all_targets)
+        gp_review = rob.gp_interpretability(l6, panel, factor_cols2, name)
+        if not gp_review.empty:
+            gp_review.to_csv(OUT_DIR / f"{name}_gp_review_pack.csv", index=False)
+            print(f"  GP review pack: {len(gp_review)} evolved alphas await "
+                  "human approval (approved=False by default)")
+
+    # STAGE 8: portfolio-level analysis of the final tradeable edge set
+    if all_masks:
+        l8 = port.run_portfolio(panel, all_masks, target, name)
+        if "error" not in l8:
+            l8["overlap"].to_csv(OUT_DIR / f"{name}_level8_signal_overlap.csv")
+            if l8["pnl_corr"] is not None:
+                l8["pnl_corr"].to_csv(OUT_DIR / f"{name}_level8_pnl_correlation.csv")
+            l8["capacity"].to_csv(OUT_DIR / f"{name}_level8_capacity.csv", index=False)
+            bk = l8["book"]
+            print(f"  level 8 portfolio: combined book Sharpe {bk['sharpe']}, "
+                  f"maxDD {bk['max_drawdown_pct']}%, "
+                  f"{len(l8['corr_flags'])} correlated edge pairs flagged")
+    else:
+        l8 = {"error": "no edges survived to portfolio stage"}
+    return l1, l2, l3, l4, l5, l6, l7, l8
 
 
 def write_summary(results: dict):
@@ -172,7 +226,7 @@ def write_summary(results: dict):
              "\nGrades: PLATINUM = passed all 5 gauntlet tests "
              "(purged CV, permutation, bootstrap, deflated Sharpe, PBO), "
              "net of transaction costs.\n"]
-    for name, (l1, l2, l3, l4, l5, l6) in results.items():
+    for name, (l1, l2, l3, l4, l5, l6, l7, l8) in results.items():
         lines.append(f"\n## {name}\n")
         if l1 is not None and not l1.empty:
             conf = l1[l1["fdr_pass"] & l1["confirmed"]]
@@ -235,6 +289,27 @@ def write_summary(results: dict):
                     f"PBO={r.get('pbo', float('nan'))}, "
                     f"DSR={r.get('dsr', float('nan'))} "
                     f"[{r['gauntlet_score']}]")
+        if l7 is not None and isinstance(l7, pd.DataFrame) and not l7.empty:
+            lines.append("\n### Boundary robustness (level 7)\n")
+            for _, r in l7.iterrows():
+                status = "ROBUST" if r["boundary_robust"] else "FRAGILE"
+                lines.append(f"- **{status}** {r['rule']}: positive after "
+                             f"{int(r['n_positive'])}/{int(r['n_boundaries'])} cuts")
+        if isinstance(l8, dict) and "error" not in l8:
+            bk = l8["book"]
+            lines.append("\n### Combined portfolio book (level 8)\n")
+            lines.append(f"- Edges in book: {len(l8['capacity'])}")
+            lines.append(f"- Annualised Sharpe (net): {bk['sharpe']}")
+            lines.append(f"- Max drawdown: {bk['max_drawdown_pct']}%")
+            lines.append(f"- Mean daily net PnL: {bk['daily_mean_pct']}%")
+            lines.append(f"- Trades skipped by concurrency cap: {bk['n_skipped_cap']}")
+            if l8["corr_flags"]:
+                lines.append("- WARNING correlated edge pairs: " +
+                             "; ".join(f"{a} ~ {b} (r={c})"
+                                       for a, b, c in l8["corr_flags"]))
+            for _, r in l8["capacity"].iterrows():
+                lines.append(f"- capacity {r['rule']}: "
+                             f"Rs {r['max_notional_inr']:,.0f}/trade")
     (OUT_DIR / "confirmed_edges.md").write_text("\n".join(lines))
     print(f"\nSummary written to {OUT_DIR / 'confirmed_edges.md'}")
 
@@ -251,7 +326,30 @@ def main():
         print("No symbols found. Point config.PATHS['minute_bars'] at your parquet folder.")
         return
 
+    # ---- STAGE 0: data integrity audit (corporate actions, survivorship,
+    # suspect jumps, stale prices). Quarantined events never enter discovery.
+    print("stage 0: data integrity audit...")
+    audit = aud.run_audit(symbols)
+    if not audit["report"].empty:
+        audit["report"].to_csv(OUT_DIR / "data_audit_report.csv", index=False)
+    print(f"  {len(audit['report'])} issues found, "
+          f"{len(audit['quarantine'])} (symbol, date) events quarantined")
+    if audit["survivorship_warning"]:
+        print("  WARNING: no point-in-time F&O universe file found "
+              f"-- backtest results may carry SURVIVORSHIP BIAS. "
+              "Provide fno_universe.parquet [symbol, from_date, to_date] to fix.")
+
     gap_panel, mr_panel = build_panel(symbols)
+    gap_panel = aud.apply_quarantine(gap_panel, audit)
+    mr_panel = aud.apply_quarantine(mr_panel, audit)
+
+    # ---- per-event execution costs (spread + impact + STT + auction slippage)
+    if not gap_panel.empty:
+        gap_panel = exe.add_event_costs(gap_panel, "gap")
+        print(f"  gap cost model: {exe.summarize_costs(gap_panel)}")
+    if not mr_panel.empty:
+        mr_panel = exe.add_event_costs(mr_panel, "mr")
+        print(f"  mr  cost model: {exe.summarize_costs(mr_panel)}")
     gap_targets = [f"cont_{h}m" for h in GAP_GO_HORIZONS] + \
                   [f"go_{h}m" for h in GAP_GO_HORIZONS] + \
                   ["cont_close", "filled_gap", "tb_ret", "tb_hit"]

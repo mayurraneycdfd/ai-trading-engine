@@ -31,7 +31,7 @@ from config import FDR_ALPHA, MIN_EVENTS, TRAIN_END
 from stats import (benjamini_hochberg, edge_metrics, oos_confirmation,
                    train_test_split_by_date)
 
-META = {"symbol", "date", "mr_time"}
+META = {"symbol", "date", "mr_time", "cost_pct"}
 
 # outcome-label prefixes that must NEVER appear as predictors (lookahead guard)
 OUTCOME_PREFIXES = ("cont_", "go_", "revert_", "rev_", "tb_", "filled_")

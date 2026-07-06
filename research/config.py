@@ -71,5 +71,37 @@ TB_UP_MULT = 2.0           # profit barrier = TB_UP_MULT * event-day ATR%
 TB_DN_MULT = 1.0           # stop barrier   = TB_DN_MULT * event-day ATR%
 TB_MAX_MIN = 120           # vertical barrier: minutes after entry
 
+# --------------------------------------- data integrity audit --------------
+AUDIT_JUMP_PCT = 25.0      # overnight |gap| above this is a suspect corporate
+                           # action unless explained by the CA file
+AUDIT_STALE_DAYS = 5       # max consecutive identical closes before flagging
+AUDIT_MIN_HISTORY_DAYS = 250   # symbols with less history are flagged
+FNO_UNIVERSE_PATH = DATA_ROOT / "fno_universe.parquet"
+                           # OPTIONAL point-in-time universe: [symbol, from_date, to_date]
+                           # if absent the engine warns about survivorship risk
+
+# --------------------------------------- execution cost model --------------
+# Per-trade cost = statutory + brokerage + spread + impact (all % of notional)
+STT_PCT = 0.025            # securities transaction tax (intraday sell side)
+STAMP_BROKER_PCT = 0.007   # stamp duty + exchange charges + brokerage (round trip)
+SPREAD_BASE_PCT = 0.03     # baseline half-spread for a liquid F&O stock
+IMPACT_COEF = 0.10         # impact = IMPACT_COEF * sqrt(participation)
+                           # participation = trade value / bar traded value
+TRADE_VALUE_INR = 1_000_000    # notional per trade for impact estimate (Rs 10 lakh)
+OPEN_AUCTION_MULT = 2.0    # spread+impact multiplier for trades at the open
+                           # (gap trades execute in the auction / first minutes)
+GAP_SLIPPAGE_COEF = 0.02   # extra slippage per 1% of |gap| for gap-entry trades
+
+# --------------------------------------- portfolio-level validation --------
+PORT_MAX_CONCURRENT = 10   # max simultaneous positions in the combined book
+PORT_CORR_MAX = 0.7        # flag edge pairs with daily-PnL correlation above this
+PORT_CAPACITY_PCT = 5.0    # max % of a stock's open-30min traded value deployable
+
+# --------------------------------------- multi-boundary robustness ---------
+BOUNDARY_DATES = ["2019-12-31", "2021-12-31", "2023-06-30"]
+                           # alternative train/test cuts; an edge must be
+                           # OOS-positive after a MAJORITY of the cuts
+BOUNDARY_MIN_PASS = 2      # of len(BOUNDARY_DATES)
+
 # ------------------------------------------------------------- outputs -----
 OUT_DIR = Path(__file__).parent / "output"
