@@ -1,11 +1,11 @@
-formula,train_ic,oos_ic,oos_p,oos_n,same_sign,confirmed
-"rank(sub(sub(ret_5d, gap_pct), div(gap_pct, rvol_20d)))",0.0831,0.0263,0.08181318961663933,4365,True,False
-"rank(sub(ret_5d, div(gap_pct, rvol_20d)))",0.0749,0.0255,0.09198869824953054,4365,True,False
-"add(add(gap_vs_atr, sub(ret_5d, gap_pct)), sub(ret_5d, gap_pct))",0.0798,0.0249,0.09995855802804998,4365,True,False
-"add(gap_vs_atr, ret_5d)",0.0694,0.0243,0.10874773840830827,4365,True,False
-"rank(add(gap_vs_atr, ret_5d))",0.0694,0.0243,0.10874773840830827,4365,True,False
-"add(log1p_abs(gap_vs_atr), ret_5d)",0.068,0.0243,0.10809838706662601,4365,True,False
-"add(add(gap_vs_atr, sub(ret_5d, gap_pct)), rank(ret_5d))",0.0803,0.0242,0.10952552590676563,4365,True,False
-"add(rank(rank(ret_5d)), add(gap_vs_atr, sub(ret_5d, gap_pct)))",0.0803,0.0242,0.10952552590676563,4365,True,False
-"add(add(gap_vs_atr, sub(ret_5d, gap_pct)), add(gap_vs_atr, sub(ret_5d, gap_pct)))",0.081,0.0241,0.11099558408992743,4365,True,False
-"add(gap_vs_atr, sub(ret_5d, gap_pct))",0.081,0.0241,0.11099558408992743,4365,True,False
+formula,train_ic,oos_ic,oos_p,oos_n,same_sign,mt_consistent,mt_agree,confirmed
+"log1p_abs(ts_z10(div(up_streak, nifty_ret_5d)))",0.0694,-0.0317,0.03800158050644737,4293,False,True,4/4,False
+"add(abs(min(ret_5d, gap_vs_atr)), add(atr14_pct, gap_pct))",0.099,-0.0254,0.09320318266117075,4365,False,True,3/4,False
+"ts_z10(div(mul(range_compression, dist_prev_low), nifty_ret_5d))",0.104,-0.0252,0.09866309171893724,4293,False,True,3/4,False
+"sub(gap_idiosyncratic, sub(ts_z10(ret_20d), sign(mkt_gap_median)))",0.0963,-0.0248,0.10407448067621268,4293,False,False,1/4,False
+"sub(ts_std10(min(rvol_open30, rv20)), sub(ts_z10(ret_20d), sign(mkt_gap_median)))",0.0791,-0.0174,0.25324031807755054,4293,False,True,2/4,False
+"sub(range_compression, sub(ts_z10(ret_20d), sign(mkt_gap_median)))",0.065,-0.0165,0.280901294396457,4293,False,True,2/4,False
+"log1p_abs(ts_z10(div(range_compression, nifty_ret_5d)))",0.1075,-0.0147,0.3364164598212599,4293,False,True,4/4,False
+"ts_z10(div(range_compression, nifty_ret_5d))",0.1075,-0.0147,0.3364164598212599,4293,False,True,4/4,False
+"log1p_abs(ts_z10(div(atr14_pct, nifty_ret_5d)))",0.1052,-0.0138,0.3665069762286932,4293,False,True,4/4,False
+"ts_z10(div(atr14_pct, nifty_ret_5d))",0.1052,-0.0138,0.3665069762286932,4293,False,True,4/4,False

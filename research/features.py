@@ -41,8 +41,10 @@ def price_volume_features(minute: pd.DataFrame, daily: pd.DataFrame) -> pd.DataF
     rng = (daily["high"] - daily["low"]) / daily["close"] * 100
     f["range_compression"] = (rng.rolling(5).mean() / rng.rolling(60).mean()).shift(1)
 
-    # Volume
-    f["rvol_20d"] = (daily["volume"] / daily["volume"].rolling(20).mean().shift(1))
+    # Volume -- LOOK-AHEAD GUARD: full-day volume of day T is not known at
+    # T's open, so rvol_20d uses YESTERDAY's volume vs its trailing average.
+    f["rvol_20d"] = (daily["volume"].shift(1)
+                     / daily["volume"].rolling(20).mean().shift(2))
     # first-30-min relative volume (vs same window 20d avg)
     m = minute.between_time("09:15", "09:45")
     v30 = m.groupby(m.index.date)["volume"].sum()
@@ -159,12 +161,92 @@ def event_features(symbol: str, dates: pd.DatetimeIndex) -> pd.DataFrame:
     news = dl.load_symbol_table("news")
     if news is not None:
         n = news[news["symbol"] == symbol]
+        # LOOK-AHEAD GUARD: news published during day T (e.g. 14:00) must not
+        # feed the 09:15 open decision of day T. Use the PREVIOUS session's
+        # news via shift(1) on the daily aggregate.
         if "sentiment" in n.columns:
-            s = n.groupby("date")["sentiment"].mean()
+            s = n.groupby("date")["sentiment"].mean().sort_index().shift(1)
             f["news_sentiment"] = s.reindex(dates.normalize()).values
-        cnt = n.groupby("date").size()
+        cnt = n.groupby("date").size().sort_index().shift(1)
         f["news_count"] = cnt.reindex(dates.normalize()).fillna(0).values
         f["has_news"] = (f["news_count"] > 0).astype(int)
+
+    return f
+
+
+# ------------------------------------------------------------------------
+# Category 6: India-specific smart-money features (delivery %, participant
+# OI, short selling, bulk deals, sector rotation, F&O ban). All lagged by
+# one session -- data published after close of day T feeds day T+1.
+# ------------------------------------------------------------------------
+def india_smart_money_features(symbol: str, dates: pd.DatetimeIndex,
+                               sector_map: dict[str, str] | None = None) -> pd.DataFrame:
+    f = pd.DataFrame(index=dates)
+    norm = dates.normalize()
+
+    # ---- delivery percentage: the strongest underused Indian signal.
+    # High delivery = real ownership changing hands (institutional
+    # conviction); low delivery = intraday churn.
+    dlv = dl.load_symbol_table("delivery")
+    if dlv is not None and "delivery_pct" in dlv.columns:
+        s = dlv[dlv["symbol"] == symbol].set_index("date")["delivery_pct"] \
+            .sort_index().shift(1)                       # yesterday's delivery
+        f["delivery_pct"] = s.reindex(norm).values
+        mu = s.rolling(20).mean()
+        sd = s.rolling(20).std()
+        f["delivery_z20"] = ((s - mu) / sd).reindex(norm).values
+
+    # ---- F&O ban list: banned = fresh F&O positions prohibited. Signals
+    # on banned days are unfillable; also a squeeze indicator on exit.
+    ban = dl.load_symbol_table("fno_ban")
+    if ban is not None:
+        b = set(pd.to_datetime(ban[ban["symbol"] == symbol]["date"]).dt.normalize())
+        in_ban = pd.Series(norm.isin(b).astype(int), index=dates)
+        f["fno_ban_today"] = in_ban.values
+        f["fno_ban_exit"] = ((in_ban.shift(1) == 1) & (in_ban == 0)).astype(int).values
+
+    # ---- participant-level OI: FII futures positioning as a market regime
+    poi = dl.load_symbol_table("participant_oi")
+    if poi is not None and "fii_fut_long" in poi.columns:
+        p = poi.set_index("date").sort_index().shift(1)  # known next morning
+        ls = p["fii_fut_long"] / p["fii_fut_short"].replace(0, np.nan)
+        f["fii_fut_long_short"] = ls.reindex(norm).values
+        f["fii_fut_ls_chg5d"] = (ls - ls.shift(5)).reindex(norm).values
+        if "client_opt_put_oi" in p.columns and "client_opt_call_oi" in p.columns:
+            pcr = p["client_opt_put_oi"] / p["client_opt_call_oi"].replace(0, np.nan)
+            f["client_opt_pcr"] = pcr.reindex(norm).values
+
+    # ---- short selling: high short interest + gap-up = squeeze fuel
+    ss = dl.load_symbol_table("short_selling")
+    if ss is not None and "short_qty" in ss.columns:
+        s = ss[ss["symbol"] == symbol].set_index("date").sort_index().shift(1)
+        if "traded_qty" in s.columns:
+            si = (s["short_qty"] / s["traded_qty"].replace(0, np.nan) * 100)
+            f["short_interest_pct"] = si.reindex(norm).values
+            f["si_pctile_90d"] = si.rolling(90).rank(pct=True).reindex(norm).values
+
+    # ---- bulk/block deals: large-investor conviction in the last 5 days
+    bd = dl.load_symbol_table("bulk_deals")
+    if bd is not None:
+        b = bd[bd["symbol"] == symbol].copy()
+        if not b.empty and "buy_sell" in b.columns:
+            b["date"] = pd.to_datetime(b["date"]).dt.normalize()
+            sign = b["buy_sell"].str.upper().map({"BUY": 1, "SELL": -1}).fillna(0)
+            daily_net = sign.groupby(b["date"]).sum()
+            net5 = daily_net.reindex(
+                pd.date_range(norm.min() - pd.Timedelta(days=10), norm.max()),
+                fill_value=0).rolling(5).sum().shift(1)   # deals up to yesterday
+            f["bulk_deal_net5d"] = net5.reindex(norm).values
+            f["bulk_deal_recent"] = (net5.reindex(norm).fillna(0) != 0).astype(int).values
+
+    # ---- sector rotation: gaps aligned with sector momentum continue more
+    rrg = dl.load_symbol_table("sector_rotation")
+    sector = (sector_map or {}).get(symbol)
+    if rrg is not None and sector is not None and "rs_ratio" in rrg.columns:
+        r = rrg[rrg["sector"] == sector].set_index("date").sort_index().shift(1)
+        f["sector_rs_ratio"] = r["rs_ratio"].reindex(norm).values
+        if "rs_momentum" in r.columns:
+            f["sector_rs_momentum"] = r["rs_momentum"].reindex(norm).values
 
     return f
 
@@ -206,7 +288,8 @@ def build_features(symbol: str, minute: pd.DataFrame,
         market_features(daily.index),
         derivative_features(symbol, daily.index),
         event_features(symbol, daily.index),
-        cross_sectional_features(symbol, daily, panel_gaps, sector_map or {}),
+        india_smart_money_features(symbol, daily.index, sector_map),
+        cross_sectional_features(symbol, daily, panel_gaps, sector_map),
     ]
     feats = pd.concat(parts, axis=1)
     feats["symbol"] = symbol

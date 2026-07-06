@@ -43,6 +43,31 @@ BINARY = {
 }
 
 
+def _ts_apply(s: pd.Series, df: pd.DataFrame, fn) -> pd.Series:
+    """Apply a time-series transform PER SYMBOL, ordered by event date.
+    Only past events of the same symbol feed each value (no lookahead)."""
+    if "symbol" not in df.columns or "date" not in df.columns:
+        return pd.Series(np.nan, index=s.index)
+    tmp = pd.DataFrame({"s": s.values, "sym": df["symbol"].values,
+                        "d": df["date"].values}, index=s.index)
+    tmp = tmp.sort_values(["sym", "d"])
+    out = tmp.groupby("sym", sort=False)["s"].transform(fn)
+    return out.reindex(s.index)
+
+
+# time-series operators over each symbol's OWN event history -- these let
+# the GP discover momentum/reversal-of-factor patterns that pointwise
+# arithmetic can never express (e.g. "IV rising over its last 5 events")
+UNARY_TS = {
+    "ts_delta5": lambda a, df: _ts_apply(a, df, lambda x: x - x.shift(5)),
+    "ts_mean5": lambda a, df: _ts_apply(a, df, lambda x: x.rolling(5).mean().shift(0)),
+    "ts_std10": lambda a, df: _ts_apply(a, df, lambda x: x.rolling(10).std()),
+    "ts_rank10": lambda a, df: _ts_apply(a, df, lambda x: x.rolling(10).rank(pct=True)),
+    "ts_z10": lambda a, df: _ts_apply(
+        a, df, lambda x: (x - x.rolling(10).mean()) / x.rolling(10).std()),
+}
+
+
 class Node:
     __slots__ = ("op", "kids", "leaf")
 
@@ -60,6 +85,8 @@ class Node:
             return df[self.leaf]
         if self.op in UNARY:
             return UNARY[self.op](self.kids[0].evaluate(df))
+        if self.op in UNARY_TS:
+            return UNARY_TS[self.op](self.kids[0].evaluate(df), df)
         return BINARY[self.op](self.kids[0].evaluate(df),
                                self.kids[1].evaluate(df))
 
@@ -72,8 +99,12 @@ class Node:
 def _random_tree(rng, cols, depth):
     if depth <= 1 or rng.random() < 0.3:
         return Node(leaf=cols[rng.integers(len(cols))])
-    if rng.random() < 0.35:
+    roll = rng.random()
+    if roll < 0.30:
         op = list(UNARY)[rng.integers(len(UNARY))]
+        return Node(op=op, kids=[_random_tree(rng, cols, depth - 1)])
+    if roll < 0.45:   # 15% chance of a time-series operator
+        op = list(UNARY_TS)[rng.integers(len(UNARY_TS))]
         return Node(op=op, kids=[_random_tree(rng, cols, depth - 1)])
     op = list(BINARY)[rng.integers(len(BINARY))]
     return Node(op=op, kids=[_random_tree(rng, cols, depth - 1),
@@ -130,9 +161,13 @@ def evolve_alphas(panel: pd.DataFrame, target: str, factor_cols: list[str],
                   population: int = GP_POPULATION,
                   generations: int = GP_GENERATIONS,
                   max_depth: int = GP_MAX_DEPTH,
-                  seed: int = GP_SEED) -> pd.DataFrame:
+                  seed: int = GP_SEED,
+                  related_targets: list[str] | None = None) -> pd.DataFrame:
     """Evolve formulas on the training window, report train + OOS rank IC.
-    Returns a DataFrame sorted by |OOS IC| with the formula strings."""
+    Returns a DataFrame sorted by |OOS IC| with the formula strings.
+    `related_targets`: sibling horizons (e.g. cont_60m for cont_30m). A real
+    alpha should predict NEIGHBOURING horizons with the same sign; one that
+    only works at exactly one horizon is likely noise."""
     rng = np.random.default_rng(seed)
     train, test = train_test_split_by_date(panel.dropna(subset=[target]), TRAIN_END)
     if len(train) < 500 or len(test) < 200:
@@ -181,14 +216,41 @@ def evolve_alphas(panel: pd.DataFrame, target: str, factor_cols: list[str],
         if ok.sum() < 100:
             continue
         oos_ic, oos_p = sps.spearmanr(sig_te[ok], yte[ok])
+        # NOTE: fitness used |IC|, so recover the SIGNED train IC for the
+        # same-sign check (an alpha whose IC flips sign OOS is not confirmed)
+        sig_tr = pop[i].evaluate(train).replace([np.inf, -np.inf], np.nan)
+        ok_tr = sig_tr.notna() & ytr.notna()
+        train_ic_signed, _ = sps.spearmanr(sig_tr[ok_tr], ytr[ok_tr]) \
+            if ok_tr.sum() >= 100 else (np.nan, np.nan)
+        same_sign = bool(np.sign(oos_ic) == np.sign(train_ic_signed)) \
+            if not np.isnan(train_ic_signed) else False
+        # multi-target consistency: same-sign OOS IC on sibling horizons
+        rel_ok, rel_total = 0, 0
+        for rt in (related_targets or []):
+            if rt == target or rt not in test.columns:
+                continue
+            yrel = test[rt]
+            okr = sig_te.notna() & yrel.notna()
+            if okr.sum() < 100:
+                continue
+            ic_r, _ = sps.spearmanr(sig_te[okr], yrel[okr])
+            if not np.isnan(ic_r):
+                rel_total += 1
+                if np.sign(ic_r) == np.sign(oos_ic):
+                    rel_ok += 1
+        mt_consistent = (rel_total == 0) or (rel_ok / rel_total >= 0.5)
         rows.append({
             "formula": formula,
-            "train_ic": round(float(fits[i] + 0.002 * pop[i].size()), 4),
+            "train_ic": round(float(train_ic_signed), 4)
+                if not np.isnan(train_ic_signed) else np.nan,
             "oos_ic": round(float(oos_ic), 4),
             "oos_p": float(oos_p),
             "oos_n": int(ok.sum()),
-            "same_sign": bool(np.sign(oos_ic) != 0),
-            "confirmed": bool(abs(oos_ic) >= 0.02 and oos_p < 0.05),
+            "same_sign": same_sign,
+            "mt_consistent": bool(mt_consistent),
+            "mt_agree": f"{rel_ok}/{rel_total}",
+            "confirmed": bool(same_sign and mt_consistent
+                              and abs(oos_ic) >= 0.02 and oos_p < 0.05),
             "tree": pop[i],
         })
         if len(rows) >= GP_TOP_KEEP * 3:
