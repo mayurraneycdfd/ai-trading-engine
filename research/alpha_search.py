@@ -181,14 +181,24 @@ def evolve_alphas(panel: pd.DataFrame, target: str, factor_cols: list[str],
         if ok.sum() < 100:
             continue
         oos_ic, oos_p = sps.spearmanr(sig_te[ok], yte[ok])
+        # NOTE: fitness used |IC|, so recover the SIGNED train IC for the
+        # same-sign check (an alpha whose IC flips sign OOS is not confirmed)
+        sig_tr = pop[i].evaluate(train).replace([np.inf, -np.inf], np.nan)
+        ok_tr = sig_tr.notna() & ytr.notna()
+        train_ic_signed, _ = sps.spearmanr(sig_tr[ok_tr], ytr[ok_tr]) \
+            if ok_tr.sum() >= 100 else (np.nan, np.nan)
+        same_sign = bool(np.sign(oos_ic) == np.sign(train_ic_signed)) \
+            if not np.isnan(train_ic_signed) else False
         rows.append({
             "formula": formula,
-            "train_ic": round(float(fits[i] + 0.002 * pop[i].size()), 4),
+            "train_ic": round(float(train_ic_signed), 4)
+                if not np.isnan(train_ic_signed) else np.nan,
             "oos_ic": round(float(oos_ic), 4),
             "oos_p": float(oos_p),
             "oos_n": int(ok.sum()),
-            "same_sign": bool(np.sign(oos_ic) != 0),
-            "confirmed": bool(abs(oos_ic) >= 0.02 and oos_p < 0.05),
+            "same_sign": same_sign,
+            "confirmed": bool(same_sign and abs(oos_ic) >= 0.02
+                              and oos_p < 0.05),
             "tree": pop[i],
         })
         if len(rows) >= GP_TOP_KEEP * 3:

@@ -23,6 +23,21 @@ PATHS = {
     "correlations": DATA_ROOT / "correlations.parquet",  # precomputed pair correlations
     "fii_dii": DATA_ROOT / "fii_dii.parquet",        # date, fii_net, dii_net
     "sector_map": DATA_ROOT / "sector_map.parquet",  # symbol, sector
+    # -------- India-specific high-value datasets (all OPTIONAL: the engine
+    # degrades gracefully when a file is absent) ----------------------------
+    "delivery": DATA_ROOT / "stock_delivery_daily.parquet",
+    #   columns: symbol, date, delivery_pct  (0-100)
+    "fno_ban": DATA_ROOT / "fno_ban_list.parquet",
+    #   columns: symbol, date  (stock was in the F&O ban list on that date)
+    "participant_oi": DATA_ROOT / "participant_oi_daily.parquet",
+    #   columns: date, fii_fut_long, fii_fut_short, dii_fut_long,
+    #            dii_fut_short, client_opt_put_oi, client_opt_call_oi
+    "sector_rotation": DATA_ROOT / "sector_rotation_rrg.parquet",
+    #   columns: sector, date, rs_ratio, rs_momentum
+    "short_selling": DATA_ROOT / "short_selling.parquet",
+    #   columns: symbol, date, short_qty, traded_qty
+    "bulk_deals": DATA_ROOT / "bulk_deals.parquet",
+    #   columns: symbol, date, buy_sell (BUY/SELL), value_inr
 }
 
 # ---------------------------------------------------------- market hours ---

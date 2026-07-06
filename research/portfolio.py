@@ -76,8 +76,17 @@ def combined_book(panel: pd.DataFrame, masks: dict[str, pd.Series],
     # (first-come basis; real system would rank by signal strength)
     tdf["rank_in_day"] = tdf.groupby("date").cumcount()
     kept = tdf[tdf["rank_in_day"] < PORT_MAX_CONCURRENT]
-    daily = kept.groupby("date")["net_ret"].mean()  # equal-weight book % PnL
+    # FIXED CAPITAL BASE: each slot gets 1/PORT_MAX_CONCURRENT of capital.
+    # Day PnL = sum of slot returns / total slots -- a 1-trade day deploys
+    # 1 slot, not 100% of the book (fixes the leverage-swing bug).
+    daily = kept.groupby("date")["net_ret"].sum() / PORT_MAX_CONCURRENT
     conc = tdf.groupby("date").size()
+
+    # FULL CALENDAR: reindex to every business day in the panel span so
+    # non-trading days count as 0% return. Annualizing over trade-active
+    # days only would inflate Sharpe ~5x for selective strategies.
+    bdays = pd.bdate_range(daily.index.min(), daily.index.max())
+    daily = daily.reindex(bdays, fill_value=0.0)
 
     equity = (1 + daily / 100).cumprod()
     peak = equity.cummax()
@@ -87,7 +96,8 @@ def combined_book(panel: pd.DataFrame, masks: dict[str, pd.Series],
     max_dd = float(dd.min())
     return {
         "daily_pnl": daily,
-        "n_trade_days": int(len(daily)),
+        "n_trade_days": int((daily != 0).sum()),
+        "n_calendar_days": int(len(daily)),
         "n_trades_total": int(len(tdf)),
         "n_trades_capped_out": int(len(tdf) - len(kept)),
         "ann_return_pct": round(ann_ret, 2),

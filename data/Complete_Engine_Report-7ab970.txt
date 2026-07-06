@@ -1,0 +1,897 @@
+
+AI Edge Discovery Engine — Complete Audit &amp; Deployment Report
+Generated: 6 July 2026 | Engine Location: D:\Downloads\ai-trading-engine-main\ai-trading-engine-main\research\
+Origin: Claude Fable 5 (Mythos-class) via v0.dev — free-tier generation
+Status: Never executed on real data. Zero output files exist. The frontend placeholder still says "Your v0 generation will show here."
+Companion Document: Edge Discovery Deep Dive — How to Make It World-Class
+
+TABLE OF CONTENTS
+Engine Architecture (8 Levels)
+Complete File Inventory (15 Python files)
+Every Configuration Parameter (60+ params)
+Every Feature &amp; Label (55+ columns)
+Data Mapping: What You Have → What The Engine Needs
+Critical Bugs That Distort Results (5 bugs)
+Statistical Weaknesses (7 issues)
+Missing High-Value Features (9 datasets unused)
+Architectural Gaps (7 issues)
+Model Enhancements (8 improvements)
+Data Quality &amp; Survivorship (3 issues)
+Deployment Checklist
+Priority Matrix
+
+1. Engine Architecture
+The engine runs a sequential 8-level discovery pipeline. Each level feeds into the next. Discovery is train-only; every candidate must survive out-of-sample confirmation.
+flowchart TD    S0["LEVEL 0&lt;br/&gt;Data Audit&lt;br/&gt;&lt;i&gt;data_audit.py&lt;/i&gt;"] --&gt; S1    S1["LEVEL 1&lt;br/&gt;Single-Factor Scan&lt;br/&gt;&lt;i&gt;edge_discovery.py&lt;/i&gt;"] --&gt; S2    S2["LEVEL 2&lt;br/&gt;Factor Combinations&lt;br/&gt;&lt;i&gt;edge_discovery.py&lt;/i&gt;"] --&gt; S3    S3["LEVEL 3&lt;br/&gt;Gradient Boosting Model&lt;br/&gt;&lt;i&gt;edge_discovery.py&lt;/i&gt;"] --&gt; S4    S4["LEVEL 4&lt;br/&gt;Hidden-Edge Detectors (A-H)&lt;br/&gt;&lt;i&gt;hidden_edges.py&lt;/i&gt;"] --&gt; S6    S6["LEVEL 6&lt;br/&gt;GP Alpha Miner&lt;br/&gt;&lt;i&gt;alpha_search.py&lt;/i&gt;"] --&gt; S5    S5["LEVEL 5&lt;br/&gt;Validation Gauntlet (5 tests)&lt;br/&gt;&lt;i&gt;validation.py&lt;/i&gt;"] --&gt; S7    S7["LEVEL 7&lt;br/&gt;Multi-Boundary Robustness&lt;br/&gt;&lt;i&gt;robustness.py&lt;/i&gt;"] --&gt; S8    S8["LEVEL 8&lt;br/&gt;Portfolio Construction&lt;br/&gt;&lt;i&gt;portfolio.py&lt;/i&gt;"]
+Level
+Module
+What It Does
+0
+data_audit.py
+Corporate-action jump verification, stale-price detection, zero-volume quarantine, survivorship bias check
+1
+edge_discovery.py L44-65
+Quantile-bucket every factor vs. target, FDR-corrected, OOS confirmation
+2
+edge_discovery.py L83-119
+AND-combine top single factors (2 &amp; 3-way), confirm OOS
+3
+edge_discovery.py L125-172
+HistGradientBoostingRegressor on ALL factors; top/bottom decile analysis, permutation importance
+4A
+hidden_edges.py L51-90
+Optimal threshold search (non-linear cliff edges)
+4B
+hidden_edges.py L107-154
+Regime-conditional edges (VIX, trend, market strength)
+4C
+hidden_edges.py L160-216
+Edge decay / rolling yearly stability
+4D
+hidden_edges.py L222-257
+Lead-lag scanner (cross-asset predictors at lags 1-5 days)
+4E
+hidden_edges.py L263-297
+Sequence/path-dependent patterns (W/L streaks)
+4F
+hidden_edges.py L307-343
+Anomaly precursors (z&gt;2 spikes 1-3 days before event)
+4G
+hidden_edges.py L349-391
+Hidden regimes via KMeans clustering
+4H
+hidden_edges.py L397-427
+Calendar micro-seasonality scan
+5
+validation.py
+5-test gauntlet: purged walk-forward CV, permutation test, block bootstrap, CSCV/PBO, deflated Sharpe
+6
+alpha_search.py
+Genetic programming alpha miner — evolves new factor formulas from arithmetic/rank operators
+7
+robustness.py
+Multi-boundary robustness (edge must survive 3 different train/test cuts) + GP interpretability review
+8
+portfolio.py
+Signal overlap (Jaccard), PnL correlation flags, combined book equity curve, capacity per edge
+
+2. Complete File Inventory
+Research Engine (Python) — 15 files, ~2,800 lines
+File
+Lines
+Size
+Purpose
+config.py
+108
+6.3KB
+All paths, parameters, constants
+data_loader.py
+112
+3.7KB
+Parquet loading with graceful degradation
+data_audit.py
+185
+8.2KB
+Level 0: data integrity audit
+features.py
+214
+9.4KB
+55+ feature columns across 5 categories
+labels.py
+135
+5.8KB
+Gap-and-Go + Mean-Reversion + Triple-Barrier labels
+stats.py
+114
+4.2KB
+Edge metrics, bucket analysis, BH-FDR, OOS confirmation
+edge_discovery.py
+172
+7.4KB
+Levels 1-3: single factors, combos, GBM model
+hidden_edges.py
+454
+21.2KB
+Level 4: 8 hidden-edge detectors (A-H)
+alpha_search.py
+210
+7.6KB
+Level 6: GP alpha miner
+validation.py
+263
+12.7KB
+Level 5: 5-test validation gauntlet
+robustness.py
+104
+4.7KB
+Level 7: multi-boundary + GP interpretability
+execution.py
+80
+3.6KB
+Per-trade execution cost model
+portfolio.py
+164
+7.4KB
+Level 8: combined book, overlap, capacity
+run_discovery.py
+370
+17.6KB
+Main orchestrator + summary writer
+make_test_data.py
+69
+2.6KB
+Synthetic data generator with planted edge
+Frontend (Next.js) — Unused boilerplate
+File
+Status
+page.tsx
+Default v0 placeholder — says *"Your v0 generation will show here"*
+package.json
+Next.js 16.2.6 + Tailwind 4 + shadcn
+
+3. Every Configuration Parameter
+Paths (what the engine expects in data/)
+Config Key
+Expected Path
+Required Columns
+minute_bars
+data/minute_bars/{SYMBOL}.parquet
+timestamp, open, high, low, close, volume
+nifty
+data/nifty.parquet
+date, close
+sp500
+data/sp500.parquet
+date, close
+india_vix
+data/india_vix.parquet
+date, close
+crude
+data/crude.parquet
+date, close
+usdinr
+data/usdinr.parquet
+date, close
+options
+data/options/{SYMBOL}.parquet
+date, pcr, iv, iv_percentile, oi_change, max_pain
+futures
+data/futures/{SYMBOL}.parquet
+date, basis, oi, oi_change, rollover
+corporate_actions
+data/corporate_actions.parquet
+symbol, date, type
+earnings_dates
+data/earnings_dates.parquet
+symbol, date
+news
+data/news.parquet
+symbol, date, sentiment, category
+correlations
+data/correlations.parquet
+*(defined but NEVER loaded)*
+fii_dii
+data/fii_dii.parquet
+date, fii_net, dii_net
+sector_map
+data/sector_map.parquet
+symbol, sector
+fno_universe
+data/fno_universe.parquet
+symbol, from_date, to_date *(OPTIONAL)*
+Label Parameters
+Parameter
+Value
+File:Line
+GAP_MIN_PCT
+0.5%
+config.py:38
+GAP_GO_HORIZONS
+[15, 30, 60, 240] min
+config.py:39
+MR_ZSCORE_ENTRY
+2.0
+config.py:40
+MR_HORIZONS
+[15, 30, 60, 120] min
+config.py:41
+TB_UP_MULT
+2.0× ATR% (profit)
+config.py:70
+TB_DN_MULT
+1.0× ATR% (stop)
+config.py:71
+TB_MAX_MIN
+120 min (time barrier)
+config.py:72
+Discovery Parameters
+Parameter
+Value
+File:Line
+TRAIN_END
+2021-12-31
+config.py:44
+MIN_EVENTS
+100
+config.py:45
+FDR_ALPHA
+0.05
+config.py:46
+N_BUCKETS
+5
+config.py:47
+COMBO_MAX_FACTORS
+3
+config.py:48
+COMBO_TOP_SINGLE
+15
+config.py:49
+Validation Gauntlet Parameters
+Parameter
+Value
+File:Line
+COST_PCT
+0.06% (flat fallback)
+config.py:52
+N_CV_FOLDS
+5
+config.py:54
+EMBARGO_DAYS
+5
+config.py:55
+N_PERMUTATIONS
+500
+config.py:56
+N_BOOTSTRAP
+1,000
+config.py:57
+BOOTSTRAP_BLOCK
+20 events
+config.py:58
+CSCV_SPLITS
+8
+config.py:59
+PBO_MAX
+0.5
+config.py:60
+GP Alpha Miner Parameters
+Parameter
+Value
+File:Line
+GP_POPULATION
+200
+config.py:63
+GP_GENERATIONS
+12
+config.py:64
+GP_MAX_DEPTH
+4
+config.py:65
+GP_TOP_KEEP
+10
+config.py:66
+GP_SEED
+42
+config.py:67
+Execution Cost Model
+Parameter
+Value
+File:Line
+STT_PCT
+0.025%
+config.py:85
+STAMP_BROKER_PCT
+0.007%
+config.py:86
+SPREAD_BASE_PCT
+0.03%
+config.py:87
+IMPACT_COEF
+0.10
+config.py:88
+TRADE_VALUE_INR
+₹10,00,000
+config.py:90
+OPEN_AUCTION_MULT
+2.0×
+config.py:91
+GAP_SLIPPAGE_COEF
+0.02 per 1% gap
+config.py:93
+STATUTORY_PCT
+0.032% (derived)
+execution.py:24
+Cost Formula: cost% = 0.032 + (0.03 + 0.10 × √participation) × auction_mult + 0.02 × |gap%|
+Portfolio Parameters
+Parameter
+Value
+File:Line
+PORT_MAX_CONCURRENT
+10 positions
+config.py:96
+PORT_CORR_MAX
+0.7
+config.py:97
+PORT_CAPACITY_PCT
+5.0%
+config.py:98
+BOUNDARY_DATES
+[2019-12-31, 2021-12-31, 2023-06-30]
+config.py:101
+BOUNDARY_MIN_PASS
+2 of 3
+config.py:104
+
+4. Every Feature &amp; Label Definition
+Features (55+ columns, 5 categories)
+Category 1 — Price/Volume (20 features) — features.py:18-72
+Feature
+Formula
+Look-Ahead Safe?
+gap_pct
+(open − prev_close) / prev_close × 100
+✅
+gap_abs
+abs(gap_pct)
+✅
+gap_dir
+sign(gap_pct)
+✅
+ret_1d
+close.pct_change(1).shift(1) × 100
+✅
+ret_5d
+close.pct_change(5).shift(1) × 100
+✅
+ret_20d
+close.pct_change(20).shift(1) × 100
+✅
+atr14_pct
+(14-day mean True Range / close).shift(1) × 100
+✅
+rv20
+(20-day std of returns × √252).shift(1) × 100
+✅
+gap_vs_atr
+gap_abs / atr14_pct
+✅
+range_compression
+(5d range% / 60d range%).shift(1)
+✅
+rvol_20d
+volume / 20d mean volume
+⚠️ uses same-day volume
+rvol_open30
+30-min volume / 20d mean 30-min volume
+✅
+dist_prev_high
+(open − prev_high) / prev_close × 100
+✅
+dist_prev_low
+(open − prev_low) / prev_close × 100
+✅
+dist_52w_high
+(open / 252d max high − 1) × 100
+✅
+dist_52w_low
+(open / 252d min low − 1) × 100
+✅
+up_streak
+consecutive same-direction closes, shifted
+✅
+zscore_20d
+(open − 20d SMA) / 20d std
+✅
+day_of_week
+0=Mon to 4=Fri
+✅
+is_month_end
+1 if day ≥ 28 or month_end
+✅
+Category 2 — Cross-Sectional (4 features) — features.py:175-194
+Feature
+Formula
+mkt_gap_median
+Median gap_pct across all other stocks
+gap_idiosyncratic
+Own gap_pct − market median gap
+sector_gap_median
+Median gap_pct across same-sector peers
+gap_vs_sector
+Own gap_pct − sector median gap
+Category 3 — Market/Index (12 features) — features.py:78-115
+Feature
+Source File
+Look-Ahead Safe?
+nifty_ret_1d
+nifty.parquet
+✅ shifted
+nifty_ret_5d
+nifty.parquet
+✅ shifted
+nifty_above_50dma
+nifty.parquet
+✅ shifted
+vix_level
+india_vix.parquet
+✅ shifted
+vix_chg_1d
+india_vix.parquet
+✅ shifted
+vix_pctile_1y
+india_vix.parquet
+✅ shifted
+sp500_overnight
+sp500.parquet
+✅ US closes before India opens
+crude_ret_1d
+crude.parquet
+✅ forward-filled
+crude_ret_5d
+crude.parquet
+✅ forward-filled
+usdinr_ret_1d
+usdinr.parquet
+✅ forward-filled
+fii_net_prev
+fii_dii.parquet
+✅ shifted
+fii_net_5d
+fii_dii.parquet
+✅ shifted
+Category 4 — Derivatives (10 features) — features.py:121-137
+Feature
+Source File
+opt_pcr, opt_iv, opt_iv_percentile, opt_oi_change, opt_max_pain
+options/{SYMBOL}.parquet
+fut_basis, fut_oi, fut_oi_change, fut_rollover, fut_long_buildup
+futures/{SYMBOL}.parquet
+Categories 5 &amp; 8 — Events/News (6 features) — features.py:143-169
+Feature
+Source File
+Look-Ahead Safe?
+earnings_today
+earnings_dates.parquet
+✅
+earnings_yesterday
+earnings_dates.parquet
+✅
+exdate_today
+corporate_actions.parquet
+✅
+news_sentiment
+news.parquet
+❌ BUG — uses same-day aggregate
+news_count
+news.parquet
+❌ BUG — uses same-day count
+has_news
+news.parquet
+❌ BUG — derived from news_count
+Labels — Gap-and-Go — labels.py:58-91
+Label
+Description
+cont_15m, cont_30m, cont_60m, cont_240m
+Signed return in gap direction, open → open+Nmin (%)
+go_15m, go_30m, go_60m, go_240m
+1 if continuation positive
+filled_gap
+1 if price touched previous close during the day
+cont_close
+Signed return in gap direction, open → day close (%)
+tb_ret
+Triple-barrier realized return %
+tb_hit
+1=profit barrier, −1=stop barrier, 0=time barrier
+Labels — Mean Reversion — labels.py:94-130
+Label
+Description
+mr_z
+Z-score at trigger
+mr_time
+Trigger timestamp (HH:MM)
+revert_15m, revert_30m, revert_60m, revert_120m
+% move toward VWAP (positive=reverted)
+rev_15m, rev_30m, rev_60m, rev_120m
+1 if reverted
+tb_ret, tb_hit
+Triple-barrier outcome
+
+5. Data Mapping
+✅ Already Arranged &amp; Ready (in C:\Users\LFP\Desktop\arranged_analysis_data\)
+Engine Expects
+Arranged File
+Status
+data/minute_bars/*.parquet
+minute_bars/ (227 symbols)
+✅ Ready
+data/nifty.parquet
+nifty.parquet (48KB)
+✅ Ready
+data/sp500.parquet
+sp500.parquet (49KB)
+✅ Ready
+data/india_vix.parquet
+india_vix.parquet (40KB)
+✅ Ready
+data/crude.parquet
+crude.parquet (46KB)
+✅ Ready
+data/usdinr.parquet
+usdinr.parquet (48KB)
+✅ Ready
+data/corporate_actions.parquet
+corporate_actions.parquet (25KB)
+✅ Ready
+data/earnings_dates.parquet
+earnings_dates.parquet (32KB)
+✅ Ready
+data/news.parquet
+news.parquet (3KB)
+⚠️ Very small — likely placeholder
+data/fii_dii.parquet
+fii_dii.parquet (55KB)
+✅ Ready
+data/sector_map.parquet
+sector_map.parquet (2KB)
+✅ Ready
+data/options/*.parquet
+options/ directory
+⚠️ Check if per-symbol files exist
+data/futures/*.parquet
+futures/ directory
+⚠️ Check if per-symbol files exist
+✅ Previously Missing — Now Created
+Engine Expects
+Status
+How Created
+data/correlations.parquet
+✅ CREATED (140MB)
+Copied from stock_correlations_daily.parquet (866K rows, 24 macro variables per stock per day)
+data/fno_universe.parquet
+✅ CREATED (291 symbols, 2016-2024)
+Built from 2,099 F&amp;O bhavcopy ZIPs → 378K records → per-symbol [from_date, to_date] ranges
+📦 Available But NOT Used by Engine (Improvement Opportunities)
+Source File
+Size
+Path
+Potential Use
+stock_delivery_daily
+21MB CSV / 1.9MB parquet
+C:\...\new_information\stock_delivery_daily.parquet
+Delivery % feature — strongest missing signal
+fno_ban_list
+149KB
+C:\...\new_information\deep_market_indicators\fno_ban_list_2015_2026.csv
+Tradability filter
+participant_oi_daily
+717KB parquet
+C:\...\new_information\fii_dii_daily\participant_oi_daily.parquet
+FII long/short ratio in index futures
+participant_wise_oi
+1.6MB
+C:\...\new_information\deep_market_indicators\participant_wise_oi_2015_2026.csv
+Participant-level OI decomposition
+sector_rotation_rrg
+969KB
+C:\...\new_information\sector_rotation_rrg.csv
+Sector RS ratio + RS momentum
+shareholding_patterns
+67KB parquet
+C:\...\new_information\shareholding_patterns.parquet
+Promoter holding changes
+quarterly_financials
+Directory (210 stocks)
+C:\...\new_information\quarterly_financials\
+Earnings surprise, revenue beat
+options_iv_greeks
+70MB CSV
+C:\...\new_information\options_iv_greeks.csv
+ATM IV, IV skew, term structure
+options_advanced_features
+19MB parquet
+C:\...\new_information\options_advanced_features.parquet
+PCR, max pain, OI analysis
+short_selling
+1.7MB
+C:\...\new_information\short_selling_2015_2026.csv
+Short interest signals
+bulk_deals
+13.8MB
+C:\...\new_information\bulk_deals_2015_2026.csv
+Large-investor conviction
+analyst_estimates
+61KB parquet
+C:\...\new_information\analyst_estimates.parquet
+Consensus vs. actual for surprise
+fii_derivatives_daily
+720KB parquet
+C:\...\new_information\fii_derivatives_daily.parquet
+FII derivative positioning
+category_turnover_cash
+396KB parquet
+C:\...\new_information\fii_dii_daily\category_turnover_cash_daily.parquet
+Cash market turnover by category
+category_turnover_fo
+334KB parquet
+C:\...\new_information\fii_dii_daily\category_turnover_fo_daily.parquet
+F&amp;O turnover by category
+nifty_pe_pb_div
+62KB
+C:\...\new_information\deep_market_indicators\nifty_pe_pb_div_2015_2026.csv
+Market valuation metrics
+monsoon_rainfall
+70KB
+C:\...\new_information\monsoon_rainfall.csv
+Seasonal agriculture signals
+macro_indicators
+1.2MB
+C:\...\new_information\macro_indicators.csv
+GDP, IIP, CPI, etc.
+sector indices
+6 files × ~210KB
+C:\...\new_information\deep_market_indicators\NIFTY_*.csv
+Bank, IT, Pharma, Metal, Auto, FMCG indices
+stock_correlations_daily
+140MB parquet (866K rows)
+C:\...\new_information\stock_correlations_daily.parquet
+Per-stock rolling correlations with 24 macro vars
+
+6. Critical Bugs
+These bugs silently inflate backtest results. Fix ALL before trusting any engine output.
+Bug 1: Look-Ahead News Leakage
+File: features.py:159-167
+What: news_sentiment and news_count aggregate ALL news from the SAME day. News published at 14:00 IST feeds into the 09:15 open decision.
+Impact: Features news_sentiment, news_count, has_news are all contaminated.
+Fix: s = n.groupby("date")["sentiment"].mean().shift(1) — use yesterday's news, not today's.
+Bug 2: Portfolio Sharpe Inflation (~5-6× overstated)
+File: portfolio.py:85
+What: ann_ret = float(daily.mean() * 252) — annualizes over trade-active days only. If strategy trades 50 of 252 days, annual return is inflated 5×.
+Impact: Reported Sharpe and annual return are meaningless for selective strategies.
+Fix: Reindex daily to full business-day calendar with fill_value=0.0 before annualizing.
+Bug 3: Portfolio Leverage Swing
+File: portfolio.py:79
+What: daily = kept.groupby("date")["net_ret"].mean() — 1 trade on a quiet day = 100% allocation; 10 trades = 10% each. Unrealistic leverage swing.
+Fix: daily = kept.groupby("date")["net_ret"].sum() / PORT_MAX_CONCURRENT
+Bug 4: Validation Gauntlet Cost Double-Counting
+File: validation.py:234-246
+What: run_gauntlet nets per-event costs, adds back COST_PCT, then sub-tests subtract COST_PCT again. Some tests double-count costs.
+Fix: Compute net returns once at the top; pass pre-netted returns to all sub-tests.
+Bug 5: GP Alpha same_sign Always True
+File: alpha_search.py:190
+What: "same_sign": bool(np.sign(oos_ic) != 0) checks if OOS IC is non-zero, NOT whether IS and OOS IC match.
+Fix: "same_sign": bool(np.sign(oos_ic) == np.sign(train_ic))
+
+7. Statistical Weaknesses
+7.1 Single Fixed Train/Test Split
+File: config.py:44 — TRAIN_END = "2021-12-31"
+Problem: All Level 1-4 discovery uses the SAME split. If 2022+ has a different regime, edges that align with post-COVID structure look "confirmed" by accident.
+Improvement: Run discovery at 3-4 different TRAIN_END dates; keep only edges confirmed at a majority.
+7.2 OOS Confirmation Threshold Too Lenient
+File: stats.py:100-113
+Problem: Confirmed if OOS same sign AND ≥50% of IS magnitude. For IS mean +0.05%, OOS only needs +0.025% to pass.
+Improvement: Add minimum OOS absolute mean (≥0.03%) AND require OOS t-stat ≥ 1.5.
+7.3 Quantile Bins Obscure Tail Edges
+File: stats.py:33-62
+Problem: pd.qcut(factor, 5) forces equal-population bins. Extreme tails (|gap| &gt; 3%) get diluted.
+Improvement: Add tail-focused tests at the top/bottom 5%, 3%, 1% independently.
+7.4 Level 3 Model Has No CV or Early Stopping
+File: edge_discovery.py:149-151
+Problem: Hardcoded max_depth=4, learning_rate=0.05, max_iter=300. No validation set, no early stopping.
+Improvement: Use early_stopping=True, validation_fraction=0.2; test 2-3 max_depth values.
+7.5 Walk-Forward CV Doesn't Actually Purge Label Overlap
+File: validation.py:56-86
+Problem: Triple-barrier labels look forward up to 120 minutes. Training samples near test fold boundaries can have overlapping labels. The "embargo" is day-based, not label-based.
+Improvement: Purge training samples whose label window (TB_MAX_MIN) overlaps the test fold.
+7.6 Permutation Test Breaks Within-Day Correlation
+File: validation.py:90-126
+Problem: On a day when 20 stocks gap due to the same overnight move, outcomes are correlated. The permutation test re-samples within each date, destroying this structure.
+Improvement: Shuffle entire date-blocks rather than re-sampling events within dates.
+7.7 CSCV/PBO Numerical Edge Cases
+File: validation.py:153-195
+Problem: When &gt;50% of blocks have &lt;5 events → NaN-dominated matrix → meaningless PBO. Logit transform produces ±inf at rank 0 or 1.
+Improvement: Require ≥60% non-NaN blocks; clip logits to [-10, 10].
+
+8. Missing High-Value Features
+These datasets are already downloaded on your machine. Adding them as features would significantly expand the engine's edge-discovery power.
+8.1 Delivery Percentage (#1 Priority)
+Source: C:\Users\LFP\Desktop\new_information\stock_delivery_daily.parquet (1.9MB, all 210 symbols)
+Why: Delivery % = fraction of shares actually changing ownership. Gap + 60% delivery = institutional accumulation → continues. Gap + 15% delivery = intraday noise → fades.
+Add as: delivery_pct feature in features.py, lagged by 1 day.
+8.2 F&amp;O Ban List Filter
+Source: C:\Users\LFP\Desktop\new_information\deep_market_indicators\fno_ban_list_2015_2026.csv (149KB)
+Why: Banned stocks cannot be traded in F&amp;O. Any backtest signal on a banned stock is unfillable.
+Add as: fno_ban flag → filter in data_audit.py quarantine.
+8.3 Participant-Level OI Decomposition
+Source: C:\Users\LFP\Desktop\new_information\fii_dii_daily\participant_oi_daily.parquet (717KB)
+Why: FII long/short ratio in index futures is a regime signal. Heavy FII shorts suppress gap-up continuation.
+Add as: fii_idx_long_short_ratio market feature.
+8.4 Sector Rotation / Relative Strength
+Source: C:\Users\LFP\Desktop\new_information\sector_rotation_rrg.csv (969KB)
+Why: Gaps aligned with sector momentum continue more often.
+Add as: sector_rs_ratio, sector_rs_momentum per event.
+8.5 Short Selling Activity
+Source: C:\Users\LFP\Desktop\new_information\short_selling_2015_2026.csv (1.7MB)
+Why: High short interest + gap-up = short squeeze → amplified continuation.
+Add as: short_interest_pct feature.
+8.6 Bulk/Block Deals
+Source: C:\Users\LFP\Desktop\new_information\bulk_deals_2015_2026.csv (13.8MB)
+Why: Bulk buy day before gap-up = institutional conviction → higher continuation probability.
+Add as: bulk_deal_flag, bulk_deal_value features.
+8.7 Shareholding Patterns
+Source: C:\Users\LFP\Desktop\new_information\shareholding_patterns.parquet (67KB)
+Why: Increasing promoter holding = bullish bias for gap continuation.
+Add as: promoter_holding_chg quarterly feature.
+8.8 Options IV Surface
+Source: C:\Users\LFP\Desktop\new_information\options_iv_greeks.csv (70MB)
+Why: ATM IV, IV skew, term structure → direct uncertainty/directional bias measures.
+Add as: atm_iv, iv_skew_25d, iv_term_structure features.
+8.9 Quarterly Financials / Earnings Surprise
+Source: C:\Users\LFP\Desktop\new_information\quarterly_financials\ (210 stocks)
+Why: Earnings-day gaps WITH positive surprise continue differently than guidance-driven gaps.
+Add as: eps_surprise_pct, revenue_beat_flag features.
+
+9. Architectural Gaps
+9.1 No Checkpointing / Resume
+Problem: If crash at symbol 180/227 → restart from scratch.
+Fix: Per-symbol result caching to disk.
+9.2 No Parallel Processing
+Problem: Sequential for-loop over 227 symbols. Feature engineering is CPU-bound and embarrassingly parallel.
+Fix: concurrent.futures.ProcessPoolExecutor or joblib.Parallel.
+9.3 No Memory Management
+Problem: All 227 stocks × 11 years of 1-min data loaded into one panel. Can exceed 32GB RAM.
+Fix: Process in batches of 30-50 symbols.
+9.4 No Config Validation
+Problem: COMBO_MAX_FACTORS=5 with COMBO_TOP_SINGLE=20 → C(20,5) = 15,504 combinations → FDR-diluted.
+Fix: Add validate_config() guard.
+9.5 No Logging
+Problem: All output via print(). No log file, timestamps, or severity levels.
+Fix: Python logging module with file+console handlers.
+9.6 Zero Unit Tests
+Problem: No automated assertions. make_test_data.py generates synthetic data but never verifies the engine finds the planted edge.
+Fix: pytest tests for planted-edge detection, pure-noise rejection, triple-barrier correctness.
+9.7 Frontend Completely Disconnected
+Problem: Next.js app is empty v0 boilerplate. No API, no results display.
+Fix: FastAPI backend serving discovery results as JSON → Next.js frontend with edge reports, equity curves, factor heatmaps.
+
+10. Model Enhancements
+10.1 Multi-Target Ensemble
+Current: One target at a time (cont_30m or revert_30m).
+Enhancement: Meta-model stacking predictions from 15m, 30m, 60m, and triple-barrier targets.
+10.2 Regime-Adaptive Sizing
+Current: Equal-weight regardless of VIX regime.
+Enhancement: Scale position size by VIX percentile.
+10.3 Correlation-Adjusted Event Independence
+Current: Each event treated as independent. 50 stocks gapping on the same day = 50 bets, but actually 1 bet.
+Enhancement: Deflate effective N: n_eff = n / (1 + (n-1) × avg_corr).
+10.4 Time-of-Day Decay for MR
+Current: MR triggers regardless of time-of-day.
+Enhancement: Add trigger_time_bucket as feature. MR at 14:30 has 1 hour; at 10:00 has 5.5 hours.
+10.5 Asymmetric Gap Direction Analysis
+Current: Gap continuation measured symmetrically.
+Enhancement: Split gap-up vs. gap-down as separate strategies (different base rates per Lou-Polk-Skouras literature).
+10.6 Walk-Forward Feature Selection
+Current: Level 3 uses ALL features.
+Enhancement: Pre-filter by rolling IC stability (same-sign IC in ≥60% of 1-year windows).
+10.7 Gaussian Mixture for Hidden Regimes
+Current: KMeans (spherical clusters, fixed k=4).
+Enhancement: GaussianMixture with BIC-based k selection for flexible regime shapes.
+10.8 GP Time-Series Operators
+Current: GP only has arithmetic/rank operators.
+Enhancement: Add ma5, ma20, delta5, zscore20 rolling operators.
+
+11. Data Quality &amp; Survivorship
+11.1 No Point-in-Time F&amp;O Universe
+File: config.py:79
+Risk: Testing on all 227 current F&amp;O stocks as if they were always in the universe. Stocks added after 2020 introduce survivorship bias.
+Fix: Build fno_universe.parquet from NSE historical F&amp;O announcements.
+11.2 Corporate Action Adjustment Gaps
+Risk: Yahoo Finance data may have inconsistent split/bonus adjustments.
+Fix: Cross-check price jumps against corporate_actions.csv.
+11.3 Correlations File Referenced But Unused
+File: config.py:23 — "correlations": DATA_ROOT / "correlations.parquet"
+Status: Path defined, never loaded by any module. The 140MB stock_correlations_daily.parquet (866K rows, 24 macro variables per stock per day) is wasted.
+
+12. Deployment Checklist
+Step 1: Copy arranged data to engine
+# Copy the arranged data folder to the engine's expected locationxcopy "C:\Users\LFP\Desktop\arranged_analysis_data\*" "D:\Downloads\ai-trading-engine-main\ai-trading-engine-main\research\data\" /E /I /Y
+Step 2: Install Python dependencies
+pip install pandas numpy scipy scikit-learn pyarrow
+Step 3: Fix the 5 critical bugs (BEFORE running)
+Bug
+File:Line
+One-Line Fix
+News look-ahead
+features.py:163-166
+Add .shift(1) to sentiment and count series
+Sharpe inflation
+portfolio.py:85
+Reindex daily to full bday calendar with fill_value=0
+Leverage swing
+portfolio.py:79
+.sum() / PORT_MAX_CONCURRENT instead of .mean()
+Cost double-count
+validation.py:234
+Single net-return computation at top of gauntlet
+GP same_sign
+alpha_search.py:190
+Compare np.sign(oos_ic) == np.sign(train_ic)
+Step 4: Test with synthetic data first
+cd D:\Downloads\ai-trading-engine-main\ai-trading-engine-main\researchpython make_test_data.pypython run_discovery.py --strategy gap
+Step 5: Run on real data
+python run_discovery.py --strategy both
+Step 6: Review outputs in research/output/
+confirmed_edges.md — human-readable summary
+gap_level1_single_factors.csv — single-factor scan results
+gap_level5_gauntlet.csv — gauntlet grades (PLATINUM/GOLD/SILVER/REJECTED)
+gap_level7_boundary_robustness.csv — multi-boundary survival
+gap_level8_signal_overlap.csv — edge overlap matrix
+
+13. Priority Matrix
+Priority
+Category
+Items
+Impact
+Effort
+🔴 P0
+Critical bugs
+6.1-6.5 (5 bugs)
+Results untrustworthy without fixes
+Low (5 one-line changes)
+🟠 P1
+Statistical methodology
+7.1-7.7 (7 issues)
+Results may be overstated
+Medium
+🟡 P2
+Missing features
+8.1 Delivery %, 8.2 F&amp;O ban, 8.3 Participant OI
+Significant new edge potential
+Medium
+🟡 P2
+Missing features
+8.4-8.9 (remaining 6)
+Incremental edge improvement
+Medium-High
+🟢 P3
+Architecture
+9.1-9.3 (checkpoint, parallel, memory)
+Practical runnability
+Medium
+🟢 P3
+Architecture
+9.4-9.7 (config, logs, tests, UI)
+Engineering quality
+Medium
+🔵 P4
+Model enhancements
+10.1-10.8 (8 items)
+Advanced capability
+High
+⚪ P5
+Data quality
+11.1-11.3 (3 items)
+Research correctness
+Medium
+
+Bottom line: The engine's architecture is academically sound and remarkably comprehensive for AI-generated code. The 8-level pipeline (audit → discovery → validation → portfolio) follows best practices from Lopez de Prado, Bailey &amp; de Prado, Politis &amp; Romano. However, the 5 critical bugs mean no output from this engine can be trusted until they are fixed. After bug fixes, adding delivery percentage and F&amp;O ban list data would give the engine its biggest immediate edge improvement, since both datasets are already on your machine and represent real alpha sources that no publicly available backtester includes.

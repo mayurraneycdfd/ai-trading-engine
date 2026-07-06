@@ -1,0 +1,307 @@
+
+How to Build a World-Class Edge Discovery Engine
+A Deep Research Note on Making the Discovery Pipeline Significantly Better
+
+PART I — What Is a "Real" Edge, and Why Most Discovered Edges Are Fake
+The Fundamental Problem
+An edge discovery engine scans thousands of factor × target combinations. With 55 features, 12 target labels, 5 quantile buckets, 3 combination depths, and 8 hidden-edge detectors, the current engine tests roughly 10,000–50,000 hypotheses per strategy. At a p-value threshold of 0.05, 250–2,500 will look "significant" by pure chance.
+The current engine uses Benjamini-Hochberg FDR correction, which is the correct starting point. But FDR controls the expected proportion of false discoveries — it does not guarantee that any individual discovery is real. To build a world-class engine, every layer must be designed with one principle:
+A real edge has an economic cause. A fake edge has a statistical cause. The engine must distinguish between them.
+The Three Tests Every Edge Must Pass
+Test
+What It Asks
+Current Engine
+What's Missing
+Statistical
+"Is this non-random?"
+✅ FDR, permutation, bootstrap
+Correlation-adjusted effective sample size
+Economic
+"Why does this edge exist?"
+❌ No economic model
+Microstructure rationale, behavioral explanation
+Temporal
+"Is this edge still alive?"
+⚠️ Partial (decay check)
+Rolling re-discovery, regime-conditional stability
+
+PART II — 12 Algorithmic Improvements to the Discovery Pipeline
+Improvement 1: Discovery-Level Expanding Walk-Forward
+Current: All discovery (Levels 1-4) uses a single fixed TRAIN_END = 2021-12-31. The entire statistical validity rests on one split point.
+Better: Run the full Level 1→4 pipeline at 4 different TRAIN_END dates (e.g., 2019-06-30, 2020-12-31, 2022-06-30, 2023-12-31). An edge is only a "candidate" if it is independently discovered (not just confirmed — actually discovered from scratch) at ≥3 of the 4 boundaries.
+Why this matters: An edge that appears when you split at 2021 but not when you split at 2020 is likely an artifact of the specific regime change around that boundary (post-COVID recovery vs. rate-hike era). True structural edges will emerge regardless of where you cut.
+Implementation: Wrap run_strategy() in a loop over TRAIN_END values. Track which factors pass Level 1 FDR at each boundary. Intersect the sets.
+
+Improvement 2: Effective Sample Size Deflation
+Current: A t-test with n=5,000 events where 50 stocks gap on the same 100 days treats all 5,000 as independent.
+Better: Compute the average pairwise return correlation of same-day events. Use the Kish effective sample size:
+$$n_{eff} = \frac{n}{1 + (n-1) \cdot \bar{\rho}_{within-day}}$$
+If $\bar{\rho} = 0.3$ and 50 stocks fire on the same day, $n_{eff} = 50 / (1 + 49 \times 0.3) = 3.2$. Across 100 such days, the effective N is ~320, not 5,000. This dramatically raises the bar for significance.
+Implementation: After building the event panel, compute panel.groupby('date')[target].corr() and use the mean off-diagonal correlation. Deflate all p-values in edge_metrics() by replacing n with n_eff in the t-statistic denominator.
+
+Improvement 3: Tail-Focused Factor Analysis
+Current: pd.qcut(factor, 5) forces equal-population quintiles. The top quintile mixes moderate and extreme values.
+Better: Add a non-parametric tail test alongside the standard buckets:
+Test the top/bottom 5%, 3%, and 1% of each factor independently
+Compute the mean return and significance of each tail
+Flag factors where the edge concentrates in the extreme tail (e.g., gap &gt; 4% is different from gap 1-4%)
+Why this matters for Indian markets: Gap-and-go edge is heavily concentrated in extreme gaps. NSE stocks with gaps &gt;3% have fundamentally different microstructure dynamics (circuit limits, opening auction mechanics, institutional order flow) than stocks with gaps of 0.5-2%.
+
+Improvement 4: Isotonic Regression for Non-Monotonic Relationships
+Current: Bucket analysis assumes monotonicity (higher factor value → higher/lower return).
+Better: Fit an isotonic regression or piecewise-linear regression to each factor-target pair. This captures:
+U-shaped relationships: extreme gaps (both up and down) continue, but moderate gaps fade
+Threshold effects: gaps below 1% are noise, gaps above 1% are signal (cliff edge)
+Saturation: after 5%, more gap doesn't help continuation (information asymmetry is fully resolved)
+Implementation: Use sklearn.isotonic.IsotonicRegression or a simple 2-segment piecewise linear fit. Measure the R² of the isotonic fit vs. the linear fit — a large difference flags non-linearity.
+
+Improvement 5: Feature Temporal Stability Filter
+Current: Level 3 (gradient boosting) uses ALL 55+ features. Some features are only predictive in certain periods.
+Better: Before ANY model, run a rolling IC stability test:
+For each feature, compute Spearman rank IC with the target in rolling 252-day windows
+Count the fraction of windows where IC is same-sign as the full-sample IC
+Keep only features with same-sign IC in ≥60% of windows
+This eliminates features that look good on the full sample because of one lucky period (e.g., a VIX feature that only worked during COVID but was flat before and after).
+Why this is critical: The gradient boosting model will happily fit to unstable features and overfit. Pre-filtering ensures the model only sees temporally robust inputs.
+
+Improvement 6: Proper Purging of Overlapping Labels
+Current: The "purged walk-forward CV" uses day-based embargo (EMBARGO_DAYS = 5). But triple-barrier labels look forward up to 120 minutes within the same day.
+Better: When a label for event at time $T$ uses price data up to $T + 120$ minutes, any test-fold event within 120 minutes of a training-fold event has label leakage. The purge should:
+For each test-fold boundary, compute the label end-time: boundary + TB_MAX_MIN minutes
+Remove training samples whose label end-time exceeds the test fold start
+For sequential same-stock events (e.g., stock gaps Monday AND Tuesday), ensure Monday's label doesn't overlap with Tuesday's training window
+Implementation: Convert the existing embargo from EMBARGO_DAYS to EMBARGO_MINUTES = TB_MAX_MIN and apply at the minute level within the event panel.
+
+Improvement 7: Regime-Aware Discovery (Not Just Regime-Conditional Testing)
+Current: Level 4B tests known factors inside predefined regimes (VIX high/low, trend up/down). But it tests the same factors that Level 1 already found.
+Better: Run the entire Level 1 single-factor scan independently inside each regime:
+Regime 1 (low VIX + uptrend): which factors predict continuation here?
+Regime 2 (high VIX + downtrend): which factors predict continuation here?
+Regime 3 (high VIX + uptrend): same
+etc.
+An edge that exists only in regime 2 will be invisible in the full-sample Level 1 scan (diluted by the other 70% of the data) but may be the strongest edge in the entire engine.
+Implementation: Before Level 1, cluster the data into 4-6 regimes (using the existing Level 4G KMeans, or better, Gaussian Mixture). Run Level 1 within each regime cluster. Retain regime-specific edges alongside universal edges.
+
+Improvement 8: Execution-Aware Discovery
+Current: Discovery (Levels 1-4) ignores execution costs. Costs are only applied in Level 5 (validation gauntlet). An edge with 0.04% mean return that costs 0.08% to trade is discovered, tested through 4 levels, then rejected at Level 5.
+Better: Filter by net-of-cost return from Level 1. After computing each factor's bucket mean return, subtract the event-specific cost (from execution.py's cost model) before testing significance. This immediately eliminates edges that are real but untradeable.
+Why this matters for gap strategies: Gap-and-go trades execute in the opening auction, where costs are 2-3× normal. The strongest statistical edges are often in extreme-gap events, which have the highest slippage. Net-of-cost analysis may reverse the ranking entirely.
+
+Improvement 9: Information-Theoretic Factor Screening
+Current: Single-factor analysis uses mean return per bucket + t-test. This misses non-linear information.
+Better: Add mutual information (MI) as a complementary factor screening metric:
+MI captures ALL types of statistical dependence (linear, non-linear, threshold)
+MI doesn't assume normality or monotonicity
+Compare MI ranking vs. Spearman IC ranking — factors that rank high on MI but low on IC have non-linear predictive power (the isotonic regression from Improvement 4 would capture it)
+Implementation: Use sklearn.feature_selection.mutual_info_regression on each factor-target pair. Normalize by the target's entropy.
+
+Improvement 10: Multi-Target Consistency Check
+Current: Each target is analyzed independently. A factor that predicts cont_15m but not cont_30m or tb_ret could be a timing artifact.
+Better: For each candidate factor, test it against ALL targets simultaneously. A real edge should show consistent directionality:
+If rvol_open30 predicts positive cont_15m, it should also predict positive cont_30m and positive tb_ret
+If it predicts positive cont_15m but NEGATIVE cont_30m, the "edge" is a short-term noise pattern that reverses within 30 minutes
+Scoring: Create a multi-horizon consistency score:
+consistency = (# targets with same-sign IC) / (total targets tested)
+Require consistency ≥ 0.75 for an edge to proceed to Level 2.
+
+Improvement 11: Adaptive GP Operators for Indian Market Microstructure
+Current: GP alpha miner uses generic arithmetic operators (add, sub, mul, div, rank, abs).
+Better: Add domain-specific operators tuned to Indian market microstructure:
+Operator
+Formula
+Why
+circuit_dist
+(upper_circuit - price) / price
+NSE circuit limits create hard barriers
+delivery_ratio
+delivery_volume / total_volume
+Institutional vs. speculative positioning
+fno_ban_proximity
+current_OI / MWPL_limit
+Approaching F&amp;O ban = constrained shorts
+rolling_z
+(x - rolling_mean(x, 20)) / rolling_std(x, 20)
+Time-series anomaly detection
+delta_n
+x - shift(x, n)
+Rate of change
+ema_n
+Exponential moving average
+Trend smoothing
+These operators let the GP discover formulas like rank(delivery_ratio) * delta_5(fut_oi_change) — which has economic meaning (rising futures OI + high delivery = institutional accumulation).
+
+Improvement 12: Causal Discovery (Granger-Style)
+Current: Lead-lag scanner (Level 4D) measures correlation at lags 1-5. Correlation ≠ causation.
+Better: Add a Granger causality test:
+For each macro factor (crude, S&amp;P500, VIX, FII flow), test whether lagged values of the factor improve prediction of the target beyond what lagged values of the target itself provide
+Use an F-test or likelihood ratio test with BIC penalty
+Only retain lead-lag relationships that pass the Granger test AND the correlation test
+Why this matters: Some correlations are spurious (e.g., crude and ONGC gap at the same time because both respond to the same overnight oil news, not because crude causes the gap). Granger testing distinguishes leading from coincident relationships.
+
+PART III — 8 New Feature Classes for Indian Market Edge
+Feature Class 1: Delivery-Based Smart Money Tracking
+The single most underused dataset in Indian markets. NSE publishes daily delivery percentage for every stock.
+Feature
+Formula
+Edge Hypothesis
+delivery_pct
+delivery_volume / total_volume
+High delivery = institutional conviction
+delivery_pct_z20
+z-score of delivery% vs 20-day history
+Anomalous delivery = informed trading
+delivery_x_gap
+delivery_pct × gap_dir
+Directional conviction: high delivery + gap-up = buy signal
+delivery_vs_sector
+stock delivery% − sector median delivery%
+Idiosyncratic institutional interest
+Economic rationale: Intraday traders don't take delivery. When delivery% spikes from 25% to 55% on a gap day, it means real buyers are absorbing the supply. This signal is almost never used in systematic Indian strategies.
+Feature Class 2: F&amp;O Participant Positioning
+Feature
+Source
+Edge Hypothesis
+fii_fut_long_short
+participant_oi_daily
+FII heavily short = suppressed upside
+dii_fut_net_oi
+participant_oi_daily
+DII positioning = domestic sentiment
+client_option_pcr
+participant_oi_daily
+Retail put-buying = fear = contrarian buy signal
+fii_net_idx_fut_chg
+participant_oi_daily
+Daily change in FII index futures = directional flow
+Feature Class 3: Short Selling Dynamics
+Feature
+Source
+Edge Hypothesis
+short_interest_ratio
+short_selling_2015_2026
+High SI + gap-up = short squeeze potential
+short_covering_flag
+short_selling + volume
+Falling SI + rising price = squeeze in progress
+si_percentile_90d
+90-day rank of short interest
+Relative extremity of short positioning
+Feature Class 4: Sector Momentum Alignment
+Feature
+Source
+Edge Hypothesis
+sector_rs_ratio
+sector_rotation_rrg
+Sector in leading quadrant = momentum tailwind
+sector_rs_momentum
+sector_rotation_rrg
+Improving vs. deteriorating sector strength
+gap_x_sector_rs
+gap_dir × sector_rs_ratio
+Gaps aligned with sector momentum continue
+Feature Class 5: Market Valuation Context
+Feature
+Source
+Edge Hypothesis
+nifty_pe_pctile
+nifty_pe_pb_div
+Market expensive → gap-ups face resistance
+nifty_div_yield
+nifty_pe_pb_div
+Dividend yield floor = support in drawdowns
+Feature Class 6: Institutional Flow Decomposition
+Feature
+Source
+Edge Hypothesis
+fii_cash_net
+category_turnover_cash
+Cash market buying = long-term conviction
+fii_fo_net
+category_turnover_fo
+F&amp;O activity = hedging or speculative
+dii_cash_buying_streak
+category_turnover_cash
+Consecutive DII buying days = strong domestic demand
+Feature Class 7: Bulk/Block Deal Intelligence
+Feature
+Source
+Edge Hypothesis
+bulk_deal_recent
+bulk_deals_2015_2026
+Bulk buy within 5 days = large-investor interest
+bulk_deal_value_pct
+deal value / market cap
+Size of conviction
+block_deal_buy_bias
+buy deals − sell deals
+Net institutional direction
+Feature Class 8: Earnings Quality &amp; Surprise
+Feature
+Source
+Edge Hypothesis
+eps_surprise_pct
+quarterly_financials vs analyst_estimates
+Beat = continuation, miss = reversal
+revenue_growth_qoq
+quarterly_financials
+Acceleration = quality gap
+promoter_holding_chg
+shareholding_patterns
+Promoter buying = ultimate insider signal
+
+PART IV — Architectural Redesign for Production-Grade Discovery
+1. Event-Driven Architecture
+Replace the monolithic run_discovery.py with an event-driven pipeline:
+DataIngestion → FeatureStore → EventGenerator → DiscoveryEngine → ValidationGauntlet → EdgeRegistry
+Each stage is independently testable, resumable, and parallelizable.
+2. Feature Store with Versioning
+Store computed features in a versioned parquet store:
+feature_store/  v1/    {SYMBOL}/      price_volume.parquet      derivatives.parquet      market.parquet      ...
+This eliminates re-computation when adding new features and enables feature-level A/B testing.
+3. Edge Registry with Lifecycle Tracking
+Instead of a static confirmed_edges.md, maintain a live edge registry:
+Column
+Description
+edge_id
+Unique identifier
+discovery_date
+When first discovered
+last_confirmed
+Last OOS confirmation date
+status
+CANDIDATE → CONFIRMED → LIVE → DECAYING → RETIRED
+monthly_returns
+Rolling 1-month net returns in production
+expected_capacity
+Max deployable notional
+4. Continuous Re-Discovery
+Run the full discovery pipeline monthly on rolling 5-year windows. Edges that stop appearing are flagged as DECAYING. New edges that appear for 3 consecutive months are promoted to CONFIRMED.
+
+PART V — Implementation Roadmap
+Phase 1: Foundation (Week 1-2)
+Fix the 5 critical bugs
+Add delivery%, F&amp;O ban, and participant OI features
+Implement effective sample size deflation
+Add tail-focused factor analysis
+Phase 2: Statistical Rigor (Week 3-4)
+Implement proper label purging
+Add multi-target consistency check
+Add feature temporal stability filter
+Fix permutation test to preserve within-day blocks
+Phase 3: New Edges (Week 5-6)
+Integrate all 8 new feature classes
+Add sector momentum, short selling, bulk deal features
+Implement isotonic regression screening
+Add GP domain-specific operators
+Phase 4: Architecture (Week 7-8)
+Build feature store with versioning
+Add edge registry with lifecycle tracking
+Implement expanding walk-forward discovery
+Add regime-aware independent discovery
+Phase 5: Production (Week 9-10)
+Build execution-aware discovery (net-of-cost from Level 1)
+Add continuous monthly re-discovery
+Build FastAPI dashboard for edge monitoring
+Implement position sizing based on edge confidence score
+
+Final thought: The current engine has the right philosophical framework — discovery on train, confirm on OOS, gauntlet validation, portfolio-level analysis. What it lacks is the depth of implementation in each layer and the Indian market-specific features that would give it a genuine information advantage. The 19 unused datasets on your machine represent the single largest untapped opportunity. A well-built engine using delivery percentage, participant OI, and short selling data would be testing hypotheses that no publicly available backtesting platform covers — and that's where the real alpha lives.

@@ -93,10 +93,12 @@ def permutation_test(dates: pd.Series, mask: pd.Series, returns: pd.Series,
     selection mask produce a mean >= the real rule's mean? Shuffling whole
     dates (not single events) preserves cross-sectional correlation, so the
     null is honest for panels where many stocks share the same day."""
+    # NOTE: `returns` must arrive ALREADY NET of costs (single netting point
+    # in run_gauntlet). No cost deduction happens here.
     df = pd.DataFrame({"date": pd.to_datetime(dates.values),
                        "mask": mask.values.astype(bool),
                        "ret": returns.values}).dropna()
-    real = df.loc[df["mask"], "ret"].mean() - COST_PCT
+    real = df.loc[df["mask"], "ret"].mean()
     n_sel = int(df["mask"].sum())
     if n_sel < 30:
         return {"perm_pass": False, "perm_reason": "too few events"}
@@ -118,7 +120,7 @@ def permutation_test(dates: pd.Series, mask: pd.Series, returns: pd.Series,
             take = day if k >= len(day) else rng.choice(day, size=k, replace=False)
             sim_rets.append(take)
         if sim_rets:
-            sim_mean = np.concatenate(sim_rets).mean() - COST_PCT
+            sim_mean = np.concatenate(sim_rets).mean()
             if sim_mean >= real:
                 beats += 1
     p_emp = (beats + 1) / (n_perm + 1)
@@ -130,8 +132,9 @@ def permutation_test(dates: pd.Series, mask: pd.Series, returns: pd.Series,
 def block_bootstrap_ci(returns: pd.Series, n_boot: int = N_BOOTSTRAP,
                        block: int = BOOTSTRAP_BLOCK, seed: int = 0) -> dict:
     """Stationary block bootstrap on the (chronological) event returns.
-    Keeps serial dependence intact. Edge must stay positive at the 5th pct."""
-    r = net_returns(returns).values
+    Keeps serial dependence intact. Edge must stay positive at the 5th pct.
+    NOTE: `returns` must arrive ALREADY NET of costs."""
+    r = returns.dropna().values
     n = len(r)
     if n < 50:
         return {"boot_pass": False, "boot_reason": "too few events"}
@@ -172,7 +175,12 @@ def cscv_pbo(dates: pd.Series, rule_returns: dict[str, pd.Series],
         for bi, blk in enumerate(blocks):
             in_blk = s[np.isin(d, blk)]
             if len(in_blk) >= 5:
-                M[ri, bi] = in_blk.mean() - COST_PCT
+                # rule_returns arrive ALREADY NET of costs
+                M[ri, bi] = in_blk.mean()
+    # numerical guard: require enough populated blocks for a meaningful PBO
+    if np.isnan(M).mean() > 0.4:
+        return {"pbo": np.nan, "pbo_pass": False,
+                "pbo_reason": "too many sparse blocks"}
     half = n_splits // 2
     logits = []
     for is_blocks in it_comb(range(n_splits), half):
@@ -188,7 +196,7 @@ def cscv_pbo(dates: pd.Series, rule_returns: dict[str, pd.Series],
             continue
         rank = sps.rankdata(oos_perf[valid])[np.nonzero(np.nonzero(valid)[0] == winner)[0][0]]
         w = rank / (valid.sum() + 1)
-        logits.append(np.log(w / (1 - w)))
+        logits.append(float(np.clip(np.log(w / (1 - w)), -10, 10)))
     if not logits:
         return {"pbo": np.nan, "pbo_pass": False, "pbo_reason": "no valid splits"}
     pbo = float(np.mean(np.array(logits) <= 0))
@@ -199,8 +207,9 @@ def cscv_pbo(dates: pd.Series, rule_returns: dict[str, pd.Series],
 def deflated_sharpe(returns: pd.Series, n_trials: int) -> dict:
     """Deflated Sharpe Ratio: probability that the true Sharpe exceeds the
     expected max Sharpe of n_trials random strategies (accounts for
-    selection bias, skew and fat tails)."""
-    r = net_returns(returns)
+    selection bias, skew and fat tails).
+    NOTE: `returns` must arrive ALREADY NET of costs."""
+    r = returns.dropna()
     n = len(r)
     if n < 50:
         return {"dsr_pass": False, "dsr_reason": "too few events"}
@@ -228,27 +237,26 @@ def run_gauntlet(panel: pd.DataFrame, mask: pd.Series, target: str,
     `family_returns` = sibling rules for the CSCV/PBO family test.
     If the panel carries a per-event `cost_pct` column (execution.py), every
     return is netted with the trade's OWN cost, not a flat assumption."""
+    # SINGLE NETTING POINT: net returns are computed exactly once here.
+    # Every sub-test below receives PRE-NETTED returns and must NOT deduct
+    # costs again (fixes the cost double-counting bug).
     sel = panel.loc[mask.fillna(False)]
     costs = sel["cost_pct"] if "cost_pct" in sel.columns else None
-    rets_gross = sel[target]
-    rets = net_returns(rets_gross, costs) + COST_PCT  # keep gross for tests
-    # tests below subtract COST_PCT internally; pre-adjust so the flat
-    # subtraction lands on the per-event-netted value
-    dates = sel["date"].reindex(rets.index)
+    net = net_returns(sel[target], costs)          # fully net, once
+    dates = sel["date"].reindex(net.index)
     res = {"rule": rule_name, "n_events": len(sel)}
     if costs is not None:
         res["cost_mean_pct"] = round(float(costs.mean()), 4)
-    # walkforward consistency is checked on FULLY NET returns
-    res.update(purged_walkforward(dates, rets - COST_PCT))
-    adj_target = panel[target].copy()
-    if "cost_pct" in panel.columns:
-        adj_target = adj_target - panel["cost_pct"] + COST_PCT
-    res.update(permutation_test(panel["date"], mask.fillna(False), adj_target))
-    res.update(block_bootstrap_ci(rets))
-    res.update(deflated_sharpe(rets, max(n_trials, 2)))
+    res.update(purged_walkforward(dates, net))
+    # permutation test needs the full panel's net returns for its null
+    panel_net = panel[target] - (panel["cost_pct"] if "cost_pct" in panel.columns
+                                 else COST_PCT)
+    res.update(permutation_test(panel["date"], mask.fillna(False), panel_net))
+    res.update(block_bootstrap_ci(net))
+    res.update(deflated_sharpe(net, max(n_trials, 2)))
     if family_returns:
         fam = dict(family_returns)
-        fam[rule_name] = pd.Series(rets.values, index=dates.values)
+        fam[rule_name] = pd.Series(net.values, index=dates.values)
         res.update(cscv_pbo(panel["date"], fam))
     else:
         res.update({"pbo": np.nan, "pbo_pass": True})
