@@ -34,7 +34,9 @@ import execution as exe
 import features as feat
 import hidden_edges as he
 import labels as lab
+import meta_label as meta
 import portfolio as port
+import regimes as reg
 import robustness as rob
 import validation as val
 from config import GAP_GO_HORIZONS, MR_HORIZONS, OUT_DIR
@@ -83,7 +85,7 @@ def build_panel(symbols: list[str]) -> tuple[pd.DataFrame, pd.DataFrame]:
 def run_strategy(panel: pd.DataFrame, name: str, target: str, all_targets: list[str]):
     if panel.empty:
         print(f"  [{name}] no events found -- check data paths in config.py")
-        return None, None, None, None, None, None, None, None
+        return None, None, None, None, None, None, None, None, None, None
     print(f"\n=== {name.upper()}  target={target}  events={len(panel)} ===")
 
     l1 = ed.level1_single_factors(panel, target, all_targets)
@@ -226,7 +228,65 @@ def run_strategy(panel: pd.DataFrame, name: str, target: str, all_targets: list[
                   f"{len(l8['corr_flags'])} correlated edge pairs flagged")
     else:
         l8 = {"error": "no edges survived to portfolio stage"}
-    return l1, l2, l3, l4, l5, l6, l7, l8
+
+    # STAGE 9: SPA / Romano-Wolf family-wise stepdown on the final family --
+    # controls the probability of even ONE false edge in the traded book
+    if all_masks:
+        fam_net = {}
+        for rname, m in all_masks.items():
+            sel = panel.loc[m.fillna(False)]
+            c = sel["cost_pct"] if "cost_pct" in sel.columns else 0.0
+            fam_net[rname] = pd.Series((sel[target] - c).values,
+                                       index=sel["date"].values)
+        l9 = val.spa_stepdown(fam_net)
+        if not l9.empty:
+            l9.to_csv(OUT_DIR / f"{name}_level9_spa.csv", index=False)
+            print(f"  level 9 SPA stepdown: "
+                  f"{int(l9['spa_confirmed'].sum())}/{len(l9)} rules "
+                  "survive family-wise error control")
+    else:
+        l9 = pd.DataFrame()
+
+    # STAGE 10: meta-labeling + Kelly sizing on each surviving edge
+    if all_masks:
+        fcols = ed._factor_cols(panel, target, all_targets)
+        l10 = meta.run_meta_labeling(panel, all_masks, target, fcols)
+        if not l10.empty:
+            l10.to_csv(OUT_DIR / f"{name}_level10_meta_labeling.csv", index=False)
+            n_imp = int(l10.get("improves", pd.Series(dtype=bool)).sum())
+            print(f"  level 10 meta-labeling: {n_imp}/{len(l10)} edges "
+                  "improved by confidence filter + Kelly sizing")
+    else:
+        l10 = pd.DataFrame()
+
+    # STAGE 11: regime analysis, CUSUM drift monitor, James-Stein breadth
+    regime_df = reg.fit_market_regimes(panel)
+    l11_rows, drift_rows, js_rows = [], [], []
+    for rname, m in all_masks.items():
+        sel = panel.loc[m.fillna(False)]
+        c = sel["cost_pct"] if "cost_pct" in sel.columns else 0.0
+        net = sel[target] - c
+        if regime_df is not None:
+            l11_rows.append(reg.edge_by_regime(panel, m, target, regime_df, rname))
+        drift_rows.append(reg.cusum_drift(sel["date"], net, rname))
+        js_rows.append(reg.james_stein_by_symbol(panel, m, target, rname))
+    l11 = pd.concat(l11_rows, ignore_index=True) if l11_rows else pd.DataFrame()
+    if not l11.empty:
+        l11.to_csv(OUT_DIR / f"{name}_level11_regimes.csv", index=False)
+    drift = pd.DataFrame(drift_rows)
+    if not drift.empty:
+        drift.to_csv(OUT_DIR / f"{name}_level11_drift_monitor.csv", index=False)
+        n_alarm = int(drift.get("drift_alarm", pd.Series(dtype=bool)).sum()) \
+            if "drift_alarm" in drift.columns else 0
+        print(f"  level 11 drift monitor: {n_alarm} edges with CUSUM alarms")
+    js = pd.DataFrame(js_rows)
+    if not js.empty:
+        js.to_csv(OUT_DIR / f"{name}_level11_breadth.csv", index=False)
+        n_broad = int(js.get("broad_edge", pd.Series(dtype=bool)).sum()) \
+            if "broad_edge" in js.columns else 0
+        print(f"  level 11 breadth: {n_broad}/{len(js)} edges are broad "
+              "(survive James-Stein shrinkage, low concentration)")
+    return l1, l2, l3, l4, l5, l6, l7, l8, l9, l10
 
 
 def write_summary(results: dict):
@@ -234,7 +294,7 @@ def write_summary(results: dict):
              "\nGrades: PLATINUM = passed all 5 gauntlet tests "
              "(purged CV, permutation, bootstrap, deflated Sharpe, PBO), "
              "net of transaction costs.\n"]
-    for name, (l1, l2, l3, l4, l5, l6, l7, l8) in results.items():
+    for name, (l1, l2, l3, l4, l5, l6, l7, l8, l9, l10) in results.items():
         lines.append(f"\n## {name}\n")
         if l1 is not None and not l1.empty:
             conf = l1[l1["fdr_pass"] & l1["confirmed"]]
@@ -318,6 +378,23 @@ def write_summary(results: dict):
             for _, r in l8["capacity"].iterrows():
                 lines.append(f"- capacity {r['rule']}: "
                              f"Rs {r['max_notional_inr']:,.0f}/trade")
+        if l9 is not None and isinstance(l9, pd.DataFrame) and not l9.empty:
+            lines.append("\n### SPA family-wise stepdown (level 9)\n")
+            lines.append("Controls the probability of even ONE false edge "
+                         "in the traded family (Romano-Wolf).\n")
+            for _, r in l9.iterrows():
+                status = "SURVIVES" if r["spa_confirmed"] else "FAILS"
+                lines.append(f"- **{status}** {r['rule']}: "
+                             f"stat {r['spa_stat']}, p={r['spa_p']}")
+        if l10 is not None and isinstance(l10, pd.DataFrame) and not l10.empty:
+            lines.append("\n### Meta-labeling + Kelly sizing (level 10)\n")
+            for _, r in l10.iterrows():
+                verdict = "IMPROVES" if r.get("improves") else "no gain"
+                lines.append(
+                    f"- {r['rule']}: base {r.get('base_mean', float('nan')):.3f}% "
+                    f"-> filtered {r.get('filtered_mean', float('nan')):.3f}% "
+                    f"(kept {r.get('kept_frac', float('nan')):.0%} of trades, "
+                    f"AUC {r.get('auc', float('nan')):.2f}) [{verdict}]")
     (OUT_DIR / "confirmed_edges.md").write_text("\n".join(lines))
     print(f"\nSummary written to {OUT_DIR / 'confirmed_edges.md'}")
 

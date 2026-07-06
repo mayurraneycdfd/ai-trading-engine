@@ -1,11 +1,11 @@
 formula,train_ic,oos_ic,oos_p,oos_n,same_sign,mt_consistent,mt_agree,confirmed
-"log1p_abs(ts_z10(div(up_streak, nifty_ret_5d)))",0.0694,-0.0317,0.03800158050644737,4293,False,True,4/4,False
-"add(abs(min(ret_5d, gap_vs_atr)), add(atr14_pct, gap_pct))",0.099,-0.0254,0.09320318266117075,4365,False,True,3/4,False
-"ts_z10(div(mul(range_compression, dist_prev_low), nifty_ret_5d))",0.104,-0.0252,0.09866309171893724,4293,False,True,3/4,False
-"sub(gap_idiosyncratic, sub(ts_z10(ret_20d), sign(mkt_gap_median)))",0.0963,-0.0248,0.10407448067621268,4293,False,False,1/4,False
-"sub(ts_std10(min(rvol_open30, rv20)), sub(ts_z10(ret_20d), sign(mkt_gap_median)))",0.0791,-0.0174,0.25324031807755054,4293,False,True,2/4,False
-"sub(range_compression, sub(ts_z10(ret_20d), sign(mkt_gap_median)))",0.065,-0.0165,0.280901294396457,4293,False,True,2/4,False
-"log1p_abs(ts_z10(div(range_compression, nifty_ret_5d)))",0.1075,-0.0147,0.3364164598212599,4293,False,True,4/4,False
-"ts_z10(div(range_compression, nifty_ret_5d))",0.1075,-0.0147,0.3364164598212599,4293,False,True,4/4,False
-"log1p_abs(ts_z10(div(atr14_pct, nifty_ret_5d)))",0.1052,-0.0138,0.3665069762286932,4293,False,True,4/4,False
-"ts_z10(div(atr14_pct, nifty_ret_5d))",0.1052,-0.0138,0.3665069762286932,4293,False,True,4/4,False
+"add(sub(div(ret_20d, ms_vpin_z20), gap_pct), ts_rank10(ts_z10(ms_vpin_z20)))",-0.0926,-0.02,0.1947974552236708,4221,True,True,4/4,False
+"sub(div(ret_20d, ms_vpin_z20), ret_20d)",-0.0915,-0.0192,0.20451428660938434,4365,True,True,4/4,False
+"add(sub(div(ret_20d, ms_vpin_z20), ret_20d), ms_vpin_z20)",-0.0862,-0.0188,0.21413077066028358,4365,True,True,4/4,False
+"add(sub(div(ret_20d, ms_vpin_z20), ret_5d), ret_5d)",-0.0878,-0.0164,0.27802528494945217,4365,True,True,4/4,False
+"add(div(ret_20d, ms_vpin_z20), div(ret_20d, ms_vpin_z20))",-0.0878,-0.0164,0.27802528494945217,4365,True,True,4/4,False
+"div(ret_20d, ms_vpin_z20)",-0.0878,-0.0164,0.27802528494945217,4365,True,True,4/4,False
+"add(sub(div(ret_20d, ms_vpin_z20), ms_vpin_z20), ms_vpin_z20)",-0.0878,-0.0164,0.27802528494945217,4365,True,True,4/4,False
+"add(sub(div(ret_20d, ms_vpin_z20), ms_vpin_z20), gap_pct)",-0.0861,-0.0161,0.2869030523501609,4365,True,True,4/4,False
+"add(sub(div(ret_20d, ms_vpin_z20), gap_pct), ms_vpin_z20)",-0.0877,-0.0157,0.30007244371820124,4365,True,True,4/4,False
+"add(sub(div(ret_20d, ms_vpin_z20), gap_pct), div(ret_20d, ms_vpin_z20))",-0.0907,-0.0155,0.30618224228740715,4365,True,True,4/4,False

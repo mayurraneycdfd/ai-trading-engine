@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 import data_loader as dl
+from microstructure import microstructure_features
 
 
 # ------------------------------------------------------------------------
@@ -290,6 +291,7 @@ def build_features(symbol: str, minute: pd.DataFrame,
         event_features(symbol, daily.index),
         india_smart_money_features(symbol, daily.index, sector_map),
         cross_sectional_features(symbol, daily, panel_gaps, sector_map),
+        microstructure_features(minute).reindex(daily.index),
     ]
     feats = pd.concat(parts, axis=1)
     feats["symbol"] = symbol

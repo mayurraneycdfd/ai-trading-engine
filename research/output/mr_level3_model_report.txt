@@ -1,42 +1,42 @@
 
 --- oos_top_decile ---
-{'n': 437, 'n_eff': 437.0, 'mean_ret': np.float64(0.005959764245297002), 'median_ret': np.float64(0.01640445252337776), 'win_rate': np.float64(0.5148741418764302), 't_stat': 0.36333844987195213, 'p_value': 0.7165281710824937, 'sharpe_like': np.float64(0.2759122043358812), 'profit_factor': np.float64(1.0447875632003645)}
+{'n': 437, 'n_eff': 437.0, 'mean_ret': np.float64(0.022161979054480318), 'median_ret': np.float64(0.026695985982097357), 'win_rate': np.float64(0.5240274599542334), 't_stat': 1.4295071722440291, 'p_value': 0.15357463109255973, 'sharpe_like': np.float64(1.0855401489900212), 'profit_factor': np.float64(1.1897684358748815)}
 
 --- oos_bottom_decile ---
-{'n': 436, 'n_eff': 436.0, 'mean_ret': np.float64(-0.0007489046757512452), 'median_ret': np.float64(-0.007810183692309151), 'win_rate': np.float64(0.48623853211009177), 't_stat': -0.04853610014364796, 'p_value': 0.9613112707553092, 'sharpe_like': np.float64(-0.03689962085291851), 'profit_factor': np.float64(0.9941923489978215)}
+{'n': 436, 'n_eff': 436.0, 'mean_ret': np.float64(0.00500165021047604), 'median_ret': np.float64(-0.00865243931823205), 'win_rate': np.float64(0.47706422018348627), 't_stat': 0.3106878728629982, 'p_value': 0.7561867297484172, 'sharpe_like': np.float64(0.23620078000322692), 'profit_factor': np.float64(1.0385595703951178)}
 
 --- oos_long_short_spread ---
-0.006708668921048247
+0.01716032884400428
 
 --- oos_rank_ic ---
-0.008576247404985
+0.005452218310652278
 
 --- feature_importance ---
-dist_prev_low        0.010966
-ret_20d              0.004932
-dist_prev_high       0.004602
-nifty_ret_1d         0.004523
-day_of_week          0.002712
-rvol_open30          0.002586
-up_streak            0.002539
-ret_5d               0.002148
-mkt_gap_median       0.001595
-vix_level            0.001020
-rv20                 0.000658
-gap_dir              0.000000
-nifty_above_50dma   -0.000048
-gap_pct             -0.000053
-is_month_end        -0.000093
-range_compression   -0.000388
-nifty_ret_5d        -0.001172
-ret_1d              -0.001544
-gap_abs             -0.001752
-vix_chg_1d          -0.001795
-gap_idiosyncratic   -0.002078
-gap_vs_atr          -0.002291
-atr14_pct           -0.002406
-rvol_20d            -0.002760
-zscore_20d          -0.002965
+ms_kyle_lambda_z20     0.005728
+ms_kyle_lambda         0.005482
+dist_prev_low          0.004537
+ms_amihud              0.003901
+mkt_gap_median         0.003739
+nifty_ret_1d           0.003056
+ms_amihud_z20          0.002877
+vix_level              0.002811
+ms_clv_pressure_z20    0.002735
+ret_5d                 0.002653
+zscore_20d             0.002338
+rvol_20d               0.002196
+ms_clv_pressure        0.001934
+ret_1d                 0.001516
+atr14_pct              0.000828
+rvol_open30            0.000533
+ret_20d                0.000256
+is_month_end           0.000247
+gap_abs                0.000058
+day_of_week            0.000045
+gap_dir                0.000000
+dist_prev_high        -0.000131
+up_streak             -0.000245
+nifty_ret_5d          -0.000251
+nifty_above_50dma     -0.000291
 dtype: float64
 
 --- n_train ---

@@ -52,6 +52,79 @@ def _annualised_sharpe(r: pd.Series) -> float:
     return float(r.mean() / r.std() * np.sqrt(252))
 
 
+# --------------------- 6. Romano-Wolf / SPA family-wise stepdown -----------
+def spa_stepdown(family_returns: dict[str, pd.Series],
+                 n_boot: int = 1000, block: int = 10,
+                 alpha: float = 0.05, seed: int = 42) -> pd.DataFrame:
+    """Family-wise error control across the WHOLE final edge family
+    (White 2000 Reality Check + Romano-Wolf 2005 stepdown, on daily
+    aggregated net returns with a stationary bootstrap).
+
+    FDR (Benjamini-Hochberg) controls the RATE of false discoveries; this
+    controls the probability of even ONE false edge in the family you
+    actually trade -- the correct standard for a production book.
+
+    Each rule's events are aggregated to daily means, aligned on the union
+    calendar (0 on non-trade days). The max-statistic null distribution is
+    built by stationary-bootstrap resampling of centred daily returns;
+    rules are rejected (confirmed) stepwise from the strongest down."""
+    if not family_returns:
+        return pd.DataFrame()
+    rng = np.random.default_rng(seed)
+    # daily mean net return per rule on the union calendar
+    daily = {}
+    for name, s in family_returns.items():
+        d = pd.Series(s.values, index=pd.to_datetime(s.index)).dropna()
+        daily[name] = d.groupby(d.index.normalize()).mean()
+    cal = sorted(set().union(*[d.index for d in daily.values()]))
+    M = pd.DataFrame({n: d.reindex(cal).fillna(0.0) for n, d in daily.items()})
+    T, k = M.shape
+    if T < 60:
+        return pd.DataFrame({"rule": list(M.columns),
+                             "spa_confirmed": False,
+                             "spa_note": "too few days"})
+    stats_obs = M.mean() / M.std().replace(0, np.nan) * np.sqrt(T)
+    centred = M - M.mean()          # null: every rule has zero mean
+    # stationary bootstrap (geometric block lengths, mean length = block)
+    boot_stats = np.empty((n_boot, k))
+    p_geo = 1.0 / block
+    vals = centred.values
+    for b in range(n_boot):
+        idx = np.empty(T, dtype=int)
+        i = rng.integers(T)
+        for t in range(T):
+            idx[t] = i
+            i = rng.integers(T) if rng.random() < p_geo else (i + 1) % T
+        sample = vals[idx]
+        mu = sample.mean(axis=0)
+        sd = sample.std(axis=0)
+        sd[sd == 0] = np.nan
+        boot_stats[b] = mu / sd * np.sqrt(T)
+    # Romano-Wolf stepdown on the max statistic
+    order = stats_obs.sort_values(ascending=False).index.tolist()
+    active = list(range(k))
+    col_pos = {c: i for i, c in enumerate(M.columns)}
+    results = {}
+    for name in order:
+        if not active:
+            results[name] = (np.nan, False)
+            continue
+        max_null = np.nanmax(boot_stats[:, active], axis=1)
+        p = float(np.mean(max_null >= stats_obs[name]))
+        if p <= alpha:
+            results[name] = (p, True)
+            active.remove(col_pos[name])   # stepdown: drop and re-test rest
+        else:
+            # once one fails, all weaker rules fail too (monotone stepdown)
+            results[name] = (p, False)
+    return pd.DataFrame([
+        {"rule": n, "spa_stat": round(float(stats_obs[n]), 2),
+         "spa_p": round(results[n][0], 4) if not np.isnan(results[n][0]) else np.nan,
+         "spa_confirmed": results[n][1]}
+        for n in M.columns
+    ])
+
+
 # ------------------------------------------- 1. purged walk-forward CV -----
 def purged_walkforward(dates: pd.Series, returns: pd.Series,
                        n_folds: int = N_CV_FOLDS,

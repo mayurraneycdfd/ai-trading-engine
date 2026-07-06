@@ -1,11 +1,11 @@
 formula,train_ic,oos_ic,oos_p,oos_n,same_sign,mt_consistent,mt_agree,confirmed
-rvol_open30,0.039,0.0969,4.56251359037566e-09,3643,True,True,4/4,True
-ts_mean5(rvol_open30),0.0285,0.0542,0.0011227071713612827,3611,True,True,4/4,True
-ts_mean5(ts_z10(gap_pct)),0.0281,-0.0434,0.009900978511119866,3539,False,True,4/4,False
-"ts_mean5(ts_z10(mul(zscore_20d, rvol_open30)))",0.0548,-0.0414,0.013698576522097309,3539,False,True,4/4,False
-ts_mean5(ts_z10(ret_5d)),0.0608,-0.0394,0.018971402293331028,3539,False,True,4/4,False
-"ts_mean5(ts_delta5(add(zscore_20d, ret_1d)))",0.0491,-0.038,0.023178458005336643,3571,False,True,4/4,False
-ts_mean5(ts_z10(zscore_20d)),0.0568,-0.034,0.04307164352969904,3539,False,True,3/4,False
-"min(ts_std10(range_compression), ts_z10(nifty_ret_5d))",-0.0429,-0.0318,0.05745706038206259,3571,True,True,4/4,False
-"ts_mean5(div(ret_20d, atr14_pct))",-0.0509,0.0309,0.06326066659871163,3611,False,True,4/4,False
-ts_mean5(ret_20d),-0.0529,0.0306,0.06555585394262334,3611,False,True,3/4,False
+"ts_delta5(ts_delta5(add(nifty_ret_5d, ms_amihud_z20)))",-0.086,0.0282,0.09281581855576893,3563,False,True,2/4,False
+"add(nifty_ret_5d, ms_amihud_z20)",-0.0896,-0.0211,0.2018816215750618,3643,True,True,2/4,False
+ts_z10(ts_rank10(ts_rank10(ms_amihud))),-0.1024,0.0145,0.3957635972702258,3427,False,True,3/4,False
+"ts_z10(max(ts_delta5(nifty_ret_5d), ts_z10(ms_amihud_z20)))",-0.0943,0.0135,0.4225010529709552,3531,False,True,4/4,False
+"max(ts_delta5(ms_amihud_z20), ts_delta5(nifty_ret_5d))",-0.0881,0.0135,0.4176884592707577,3603,False,True,3/4,False
+"max(ts_delta5(gap_vs_atr), ts_z10(ms_amihud_z20))",-0.1138,-0.0112,0.5006522146550493,3603,True,True,4/4,False
+"ts_delta5(add(nifty_ret_5d, ms_amihud_z20))",-0.1056,0.01,0.5467503077719217,3603,False,True,2/4,False
+"max(gap_vs_atr, ts_z10(ms_amihud_z20))",-0.1038,-0.0095,0.5651002320653683,3643,True,True,4/4,False
+"max(max(gap_vs_atr, ts_z10(ms_amihud_z20)), ts_z10(ms_amihud_z20))",-0.1038,-0.0095,0.5651002320653683,3643,True,True,4/4,False
+"max(ts_delta5(nifty_ret_5d), ts_z10(mkt_gap_median))",-0.0918,-0.0084,0.6134501902455998,3603,True,True,4/4,False
