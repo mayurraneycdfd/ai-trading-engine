@@ -5,7 +5,12 @@ Edit the paths to point at your parquet data folders.
 from pathlib import Path
 
 # ---------------------------------------------------------------- paths ----
-DATA_ROOT = Path("data")  # change to your data root
+# Auto-detect the data root: prefers the user's arranged_analysis_data folder
+_CANDIDATE_ROOTS = [Path("arranged_analysis_data"),
+                    Path("../arranged_analysis_data"),
+                    Path("data")]
+DATA_ROOT = next((p for p in _CANDIDATE_ROOTS if p.exists()),
+                 _CANDIDATE_ROOTS[0])
 
 PATHS = {
     # 1-min OHLCV parquet per stock: columns [timestamp, open, high, low, close, volume]
@@ -38,6 +43,28 @@ PATHS = {
     #   columns: symbol, date, short_qty, traded_qty
     "bulk_deals": DATA_ROOT / "bulk_deals.parquet",
     #   columns: symbol, date, buy_sell (BUY/SELL), value_inr
+    # -------- global overnight context (daily close series) -----------------
+    "gift_nifty": DATA_ROOT / "gift_nifty_overnight.parquet",
+    "us_vix": DATA_ROOT / "us_vix.parquet",
+    "us_10y": DATA_ROOT / "us_10y_yield.parquet",
+    "dollar_index": DATA_ROOT / "dollar_index.parquet",
+    "gold": DATA_ROOT / "gold.parquet",
+    "copper": DATA_ROOT / "copper.parquet",
+    "nikkei": DATA_ROOT / "nikkei.parquet",
+    "hang_seng": DATA_ROOT / "hang_seng.parquet",
+    # -------- Indian macro & event calendars --------------------------------
+    "rbi_repo": DATA_ROOT / "rbi_repo_rate.parquet",
+    #   columns: date, repo_rate (and optionally: policy_meeting flag)
+    "cpi_wpi_iip": DATA_ROOT / "cpi_wpi_iip.parquet",
+    #   columns: date, indicator (CPI/WPI/IIP), value  (date = release date)
+    "nse_holidays": DATA_ROOT / "nse_holidays.parquet",
+    #   columns: date
+    "constituent_changes": DATA_ROOT / "constituent_changes.parquet",
+    #   columns: symbol, date, action (INCLUDE/EXCLUDE), index_name
+    "promoter_pledges": DATA_ROOT / "promoter_pledges.parquet",
+    #   columns: symbol, date, pledge_pct
+    "nifty_sector_indices": DATA_ROOT / "nifty_sector_indices.parquet",
+    #   columns: date, sector (or index_name), close
 }
 
 # ---------------------------------------------------------- market hours ---

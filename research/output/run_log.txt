@@ -17,6 +17,7 @@ pass 2/2: features and labels per stock...
   mr  cost model: {'cost_mean': 0.5092, 'cost_p90': 0.5092, 'cost_max': 0.5092}
 
 === GAP  target=cont_30m  events=4620 ===
+  level 0 hypotheses: 1/15 testable, 0 confirmed OOS
   level 1: 37 factors tested, 0 confirmed OOS + FDR
   level 3: OOS rank IC = 0.027, long-short spread = 0.027%
   level 4 [A_optimal_thresholds]: 33 candidates, 1 confirmed OOS
@@ -28,6 +29,7 @@ pass 2/2: features and labels per stock...
   level 6: 10 evolved alphas, 0 confirmed OOS
 
 === MR  target=revert_30m  events=5563 ===
+  level 0 hypotheses: 1/15 testable, 0 confirmed OOS
   level 1: 37 factors tested, 0 confirmed OOS + FDR
   level 2: 2 combos tested, 0 confirmed
   level 3: OOS rank IC = 0.005, long-short spread = 0.017%
