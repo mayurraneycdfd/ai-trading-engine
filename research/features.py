@@ -115,6 +115,55 @@ def market_features(dates: pd.DatetimeIndex) -> pd.DataFrame:
         f["fii_net_prev"] = s.shift(1).reindex(dates)
         f["fii_net_5d"] = s.rolling(5).sum().shift(1).reindex(dates)
 
+    # ---- GIFT Nifty: trades overnight, so the level AT India's open is
+    # legitimately known information -- the best pre-open gap predictor.
+    gift = dl.load_daily_series("gift_nifty")
+    nifty_c = nifty if nifty is not None else None
+    if gift is not None and nifty_c is not None:
+        prev_nifty = nifty_c.shift(1)
+        gift_al = gift.reindex(dates, method="ffill")
+        f["gift_premium_pct"] = ((gift_al - prev_nifty.reindex(dates))
+                                 / prev_nifty.reindex(dates) * 100)
+
+    # ---- global overnight context: all these close BEFORE India opens,
+    # so their latest values are known at 09:15 IST (ffill, no shift needed
+    # for US assets; Asian markets are concurrent so shift(0) at open is
+    # only partially known -- use previous close to be safe)
+    for key, prefix in (("us_vix", "usvix"), ("us_10y", "us10y"),
+                        ("dollar_index", "dxy"), ("gold", "gold"),
+                        ("copper", "copper")):
+        s = dl.load_daily_series(key)
+        if s is not None:
+            f[f"{prefix}_ret_1d"] = s.pct_change().reindex(dates, method="ffill") * 100
+            if key == "us_vix":
+                f["usvix_level"] = s.reindex(dates, method="ffill")
+    for key, prefix in (("nikkei", "nikkei"), ("hang_seng", "hsi")):
+        s = dl.load_daily_series(key)
+        if s is not None:
+            # Asian sessions overlap India's open -> use PREVIOUS close
+            f[f"{prefix}_ret_1d"] = s.pct_change().shift(1) \
+                .reindex(dates, method="ffill") * 100
+
+    # ---- Indian macro: repo-rate changes and macro release days
+    repo = dl.load_daily_series("rbi_repo", value_col=None)
+    if repo is not None:
+        r = repo.reindex(dates, method="ffill")
+        f["repo_rate"] = r
+        f["repo_chg_recent"] = (r != r.shift(5)).astype(int)  # changed in last week
+    cpi = dl.load_symbol_table("cpi_wpi_iip")
+    if cpi is not None and "date" in cpi.columns:
+        rel = set(pd.to_datetime(cpi["date"]).dt.normalize())
+        f["macro_release_today"] = dates.normalize().isin(rel).astype(int)
+
+    # ---- holiday calendar: pre/post-holiday session effects
+    hol = dl.load_symbol_table("nse_holidays")
+    if hol is not None and "date" in hol.columns:
+        hset = set(pd.to_datetime(hol["date"]).dt.normalize())
+        nxt = pd.Series(dates.normalize() + pd.offsets.BDay(1), index=dates)
+        prv = pd.Series(dates.normalize() - pd.offsets.BDay(1), index=dates)
+        f["pre_holiday"] = nxt.isin(hset).astype(int).values
+        f["post_holiday"] = prv.isin(hset).astype(int).values
+
     return f
 
 
@@ -248,6 +297,31 @@ def india_smart_money_features(symbol: str, dates: pd.DatetimeIndex,
         f["sector_rs_ratio"] = r["rs_ratio"].reindex(norm).values
         if "rs_momentum" in r.columns:
             f["sector_rs_momentum"] = r["rs_momentum"].reindex(norm).values
+
+    # ---- promoter pledges: rising pledge % = distress; forced-selling risk
+    plg = dl.load_symbol_table("promoter_pledges")
+    if plg is not None and "pledge_pct" in plg.columns:
+        p = plg[plg["symbol"] == symbol].set_index("date")["pledge_pct"] \
+            .sort_index()
+        pf = p.reindex(pd.date_range(norm.min() - pd.Timedelta(days=200),
+                                     norm.max()), method="ffill").shift(1)
+        f["pledge_pct"] = pf.reindex(norm).values
+        f["pledge_chg_90d"] = (pf - pf.shift(90)).reindex(norm).values
+
+    # ---- index inclusion/exclusion: forced passive flows around the date
+    cc = dl.load_symbol_table("constituent_changes")
+    if cc is not None and "action" in cc.columns:
+        c = cc[cc["symbol"] == symbol].copy()
+        if not c.empty:
+            c["date"] = pd.to_datetime(c["date"]).dt.normalize()
+            inc = set(c.loc[c["action"].str.upper().str.startswith("INC"), "date"])
+            exc = set(c.loc[c["action"].str.upper().str.startswith("EXC"), "date"])
+            win_inc = set().union(*[{d + pd.Timedelta(days=k) for k in range(-10, 11)}
+                                    for d in inc]) if inc else set()
+            win_exc = set().union(*[{d + pd.Timedelta(days=k) for k in range(-10, 11)}
+                                    for d in exc]) if exc else set()
+            f["index_inclusion_window"] = norm.isin(win_inc).astype(int)
+            f["index_exclusion_window"] = norm.isin(win_exc).astype(int)
 
     return f
 

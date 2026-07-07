@@ -33,6 +33,7 @@ import edge_discovery as ed
 import execution as exe
 import features as feat
 import hidden_edges as he
+import hypothesis_library as hyp
 import labels as lab
 import meta_label as meta
 import portfolio as port
@@ -87,6 +88,17 @@ def run_strategy(panel: pd.DataFrame, name: str, target: str, all_targets: list[
         print(f"  [{name}] no events found -- check data paths in config.py")
         return None, None, None, None, None, None, None, None, None, None
     print(f"\n=== {name.upper()}  target={target}  events={len(panel)} ===")
+
+    # STAGE 0: pre-registered hypothesis library. These 15 rules were stated
+    # BEFORE looking at the data (economic priors), so they carry far less
+    # multiple-testing burden than anything the blind search finds.
+    l0 = hyp.run_hypotheses(panel, target)
+    if not l0.empty:
+        l0.to_csv(OUT_DIR / f"{name}_level0_hypotheses.csv", index=False)
+        tested = l0[l0["status"] == "tested"]
+        n_conf = int(tested["confirmed"].sum()) if not tested.empty else 0
+        print(f"  level 0 hypotheses: {len(tested)}/{len(l0)} testable, "
+              f"{n_conf} confirmed OOS")
 
     l1 = ed.level1_single_factors(panel, target, all_targets)
     l1.to_csv(OUT_DIR / f"{name}_level1_single_factors.csv")

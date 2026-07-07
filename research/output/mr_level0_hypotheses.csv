@@ -1,0 +1,16 @@
+hypothesis,why,status,n_train,n_test,train_mean,oos_mean,train_t,oos_t,oos_hit,confirmed
+H01_delivery_gap_continuation,High-delivery gap-ups with sector tailwind continue (institutional conviction),no data,,,,,,,,
+H02_fii_positioning_fade,Gap-downs against heavy FII long positioning recover (smart money wins),no data,,,,,,,,
+H03_earnings_gap_drift,Earnings gaps drift in the gap direction (intraday PEAD),no data,,,,,,,,
+H04_ban_exit_squeeze,F&O ban exits release pent-up positioning demand,no data,,,,,,,,
+H05_short_squeeze,High short interest + gap up = squeeze continuation,no data,,,,,,,,
+H06_bulk_deal_breakout,Bulk-deal accumulation + breakout open continues,no data,,,,,,,,
+H07_gap_overshoot_fade,Gaps beyond GIFT-implied fair value revert,no data,,,,,,,,
+H08_high_vix_reversion,Oversold z-scores snap back harder in high-VIX regimes,too few events,0.0,89.0,,,,,,
+H09_index_inclusion_drift,Index inclusion windows drift up on passive flows,no data,,,,,,,,
+H10_post_holiday_gap_fade,Post-holiday gaps overreact and fade,no data,,,,,,,,
+H11_long_buildup_continuation,Futures long buildup + gap up continues,no data,,,,,,,,
+H12_idiosyncratic_gap_fade,Idiosyncratic gaps fade; common-factor gaps persist,tested,367.0,1340.0,0.003,0.008,0.16,0.92,0.508,False
+H13_delivery_spike_reversal,Delivery spikes after down days mark institutional accumulation,no data,,,,,,,,
+H14_pledge_distress_momentum,Pledge-distress gap-downs keep falling (forced selling),no data,,,,,,,,
+H15_global_riskoff_fade,US-fear-driven gap-downs recover intraday,no data,,,,,,,,
