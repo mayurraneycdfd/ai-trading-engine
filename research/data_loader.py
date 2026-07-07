@@ -60,8 +60,21 @@ def load_daily_series(key: str, value_col: str | None = None) -> pd.Series | Non
         df = df.set_index(ts_col)
     df = df.sort_index()
     if value_col is None:
-        value_col = next((c for c in df.columns if c.lower() == "close"), df.columns[-1])
-    return df[value_col].astype(float)
+        # fallback: prefer "close", else the LAST NUMERIC column -- string
+        # columns (e.g. gift_nifty's "signalsavailable" = "YES") must never
+        # be picked up by the default path
+        value_col = next((c for c in df.columns if c.lower() == "close"), None)
+        if value_col is None:
+            numeric = [c for c in df.columns
+                       if pd.api.types.is_numeric_dtype(df[c])]
+            if not numeric:
+                return None
+            value_col = numeric[-1]
+    s = pd.to_numeric(df[value_col], errors="coerce").astype(float)
+    # collapse duplicate timestamps (multiple rows per day) to the last value
+    if s.index.has_duplicates:
+        s = s.groupby(level=0).last()
+    return s
 
 
 def load_symbol_table(key: str) -> pd.DataFrame | None:
