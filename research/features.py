@@ -117,7 +117,9 @@ def market_features(dates: pd.DatetimeIndex) -> pd.DataFrame:
 
     # ---- GIFT Nifty: trades overnight, so the level AT India's open is
     # legitimately known information -- the best pre-open gap predictor.
-    gift = dl.load_daily_series("gift_nifty")
+    # value_col is explicit: the file's last column ("signalsavailable")
+    # holds strings like "YES"/"PARTIAL", which crashes the default fallback.
+    gift = dl.load_daily_series("gift_nifty", value_col="niftyopen")
     nifty_c = nifty if nifty is not None else None
     if gift is not None and nifty_c is not None:
         prev_nifty = nifty_c.shift(1)
@@ -239,7 +241,14 @@ def india_smart_money_features(symbol: str, dates: pd.DatetimeIndex,
     # conviction); low delivery = intraday churn.
     dlv = dl.load_symbol_table("delivery")
     if dlv is not None and "delivery_pct" in dlv.columns:
-        s = dlv[dlv["symbol"] == symbol].set_index("date")["delivery_pct"] \
+        d = dlv[dlv["symbol"] == symbol]
+        # DUPLICATE-DATE GUARD: raw NSE files carry multiple series per
+        # stock (EQ/BE/BL...), producing duplicate dates that crash
+        # reindex. Prefer the EQ series when present, then dedupe dates.
+        if "series" in d.columns and (d["series"] == "EQ").any():
+            d = d[d["series"] == "EQ"]
+        d = d.drop_duplicates(subset=["date"], keep="first")
+        s = d.set_index("date")["delivery_pct"] \
             .sort_index().shift(1)                       # yesterday's delivery
         f["delivery_pct"] = s.reindex(norm).values
         mu = s.rolling(20).mean()
@@ -269,7 +278,9 @@ def india_smart_money_features(symbol: str, dates: pd.DatetimeIndex,
     # ---- short selling: high short interest + gap-up = squeeze fuel
     ss = dl.load_symbol_table("short_selling")
     if ss is not None and "short_qty" in ss.columns:
-        s = ss[ss["symbol"] == symbol].set_index("date").sort_index().shift(1)
+        s = ss[ss["symbol"] == symbol] \
+            .drop_duplicates(subset=["date"], keep="first") \
+            .set_index("date").sort_index().shift(1)
         if "traded_qty" in s.columns:
             si = (s["short_qty"] / s["traded_qty"].replace(0, np.nan) * 100)
             f["short_interest_pct"] = si.reindex(norm).values
@@ -301,8 +312,9 @@ def india_smart_money_features(symbol: str, dates: pd.DatetimeIndex,
     # ---- promoter pledges: rising pledge % = distress; forced-selling risk
     plg = dl.load_symbol_table("promoter_pledges")
     if plg is not None and "pledge_pct" in plg.columns:
-        p = plg[plg["symbol"] == symbol].set_index("date")["pledge_pct"] \
-            .sort_index()
+        p = plg[plg["symbol"] == symbol] \
+            .drop_duplicates(subset=["date"], keep="first") \
+            .set_index("date")["pledge_pct"].sort_index()
         pf = p.reindex(pd.date_range(norm.min() - pd.Timedelta(days=200),
                                      norm.max()), method="ffill").shift(1)
         f["pledge_pct"] = pf.reindex(norm).values
